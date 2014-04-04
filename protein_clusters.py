@@ -15,7 +15,10 @@ class ProteinClusters(object):
         """
         """
         self.data = self.load_clusters(clusters_fi)
-                       
+
+    def __len__(self):
+        return len(self.data.clusters)
+
     def load_clusters(self,fi):
         """
         Load given clusters file
@@ -30,15 +33,21 @@ class ProteinClusters(object):
 
         if "proteins" not in store or "clusters" not in store:  
             proteins = {"protein_id":[],
-                        "cluster":[]}
-            clusters = {"size":[]}
+                        "cluster_id":[]}
+            clusters = {"size":[],
+                        "cluster_id":[]}
             
             with open(fi) as f:
                 for C,l in enumerate(f):
                     l = l.split()
+                    clusters["cluster_id"].append("pc_{}".format(C))
                     clusters["size"].append(len(l))
-                    proteins["cluster"] += [C] * len(l)
-                    proteins["protein_id"] += [re.search('([NY][CP]_[0-9]*|^[0-9]{3}[A-Z]{3}[0-9_]*)', prot).group(1) for prot in l]
+                    proteins["cluster_id"] += ["pc_{}".format(C)] * len(l)
+                    try :
+                        proteins["protein_id"] += [re.search('([NY][CP]_[0-9]*|^[0-9]{2,3}[A-Z]{3}[0-9_]*)', prot).group(1) for prot in l]
+                    except AttributeError as e:
+                        print prot
+                        raise
                                         
             store.append("proteins",pandas.DataFrame(proteins).set_index("protein_id"), format="table")
             store.append("clusters",pandas.DataFrame(clusters), format="table")

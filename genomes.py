@@ -9,20 +9,27 @@ class Genomes(object):
     Data about reference genomes, object built from the refseq gbff file.
     """
     
-    def __init__(self, fi ):
+    def __init__(self, refseq=True,tara=False):
         """
         
         Arguments:
         - `fi`:
         """
-        self._fi = fi
-
-
+        if refseq and not tara:
+            self.data = self.load_refseq()
+        if tara and not refseq:
+            self.data = self.load_tara()
+        if refseq and tara:
+            self.data = pandas.HDFStore(options.cache_folder+"all_contigs.h5")
+            if not "contigs" in self.data:
+  
+                refseq = self.load_refseq()
+                tara = self.load_tara()
+                self.data.append('contigs',pandas.concat((tara.contigs,refseq.contigs)),format='table', data_columns=True)
+                self.data.append('proteins',pandas.concat((tara.proteins,refseq.proteins)),format='table', data_columns=True)
+                self.data.append('metadata',tara.metadata,format='table')
 
         
-    def __len__(self):
-        return len(self.names)
-
     def load_tara(self,h5_name = "tara.h5",fi_faa=None,fi_fna=None,fi_meta=None):
         """
         Load TARA metadata
@@ -42,14 +49,17 @@ class Genomes(object):
         if not "contigs" in store:
             fi_fna = os.path.expanduser("~/data/tara/tara_contigs.txt") if fi_fna == None else os.path.expanduser(fi_fna) 
             contigs = {"name":[],
-                      "Station":[]}
+                      "origin":[]}
 
             with open(fi_fna,"rb") as fna:
                 for l in fna:
                     contigs["name"].append(l.rstrip())
-                    contigs["Station"].append(l.split("_")[0])
+                    contigs["origin"].append(l.split("_")[0])
 
             contigs = pandas.DataFrame(contigs).set_index("name")
+            contigs["family"] = None
+            contigs["genus"] = None
+
             store.append('contigs',contigs,format='table',data_columns=True)
 
         if not "proteins" in store:
@@ -62,8 +72,9 @@ class Genomes(object):
 
                     proteins["protein_id"].append(l.split("#")[0].rstrip()[1:])
                     proteins["contig"].append("_".join(l.split("_")[:2])[1:])
-
+                
             proteins = pandas.DataFrame(proteins).set_index("protein_id")
+            proteins["function"] = None
             store.append('proteins',proteins,format='table',data_columns=True)
         return store
             
@@ -84,7 +95,7 @@ class Genomes(object):
 
         store =  pandas.HDFStore(options.cache_folder+h5_name)
 
-        if "genome" not in store or "proteins" not in store:
+        if "contigs" not in store or "proteins" not in store:
             taxa = pandas.read_pickle(fi_taxa)
             families = frozenset(taxa[taxa["Rank"]=="family"]["Name"])
             genera = frozenset(taxa[taxa["Rank"]=="genus"]["Name"])
@@ -121,8 +132,9 @@ class Genomes(object):
 
 
             genome = pandas.DataFrame(genome).set_index("name")
+            genome["origin"] = "refseq_jan14"
             proteins = pandas.DataFrame(proteins).set_index("protein_id")
-            store.append('genome',genome,format='table',data_columns=True)
+            store.append('contigs',genome,format='table',data_columns=True)
             store.append('proteins',proteins,format='table',data_columns=True)
 
             nf = len(genome) - genome.family.count() 
