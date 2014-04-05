@@ -4,6 +4,9 @@ import scipy.stats as stats
 import scipy.sparse as sparse
 from itertools import combinations
 import logging
+import sys 
+logging.basicConfig(level=logging.DEBUG)
+
 
 class PCMatrix(object):
     """
@@ -34,7 +37,13 @@ class PCMatrix(object):
         clusters.index.name = "name"
         self.features = clusters.reset_index() 
         self.features["pos"] = self.features.index
-        
+
+        logging.debug("Contigs:\n {0}".format(self.contigs.head()))
+        logging.debug("Features:\n {0}".format(self.features.head()))
+        logging.debug("Proteins_clusters:\n {0}".format(cluster_proteins.head()))
+        logging.debug("Proteins_ref:\n {0}".format(ref_proteins.head()))
+
+
         self.matrix = self.load(ref_proteins,cluster_proteins) 
     
     def load(self,ref_proteins,cluster_proteins):
@@ -47,13 +56,19 @@ class PCMatrix(object):
         - features (list)
         - contigs (pandas.Dataframe)
         """
-        pc = pandas.merge(ref_proteins.join(cluster_proteins), self.features,
+        pc = ref_proteins.join(cluster_proteins,how="right")
+        logging.debug("Merge 0 :\n {0}".format(pc.head()))
+        
+        pc = pandas.merge(pc , self.features,
                           left_on="cluster",right_on="name").loc[:,["contig","pos"]].drop_duplicates()
-
+    
+        logging.debug("Merge 1 :\n {0}".format(pc.head()))
         pc = pandas.merge(pc, self.contigs,
                           left_on="contig", right_on="name",
                           suffixes=["_cluster","_contig"] ).loc[:,["pos_contig","pos_cluster"]]
-        print pc.values
+
+        logging.debug("Merge 2 :\n {0}".format(pc.head()))
+
         matrix = sparse.coo_matrix(([1]*len(pc),(zip(*pc.values))),dtype="bool")
         matrix = sparse.csr_matrix(matrix)
         logging.debug("P/A Matrix {0[0]} genomes by {0[1]} protein clusters.".format(matrix.shape))
@@ -67,17 +82,26 @@ class PCMatrix(object):
         number_of_pc = matrix.sum(1)
         
         # Number of common protein clusters between two contigs 
-        commons_pc = matrix.dot(matrix.transpose())
+        commons_pc = matrix.dot(sparse.csr_matrix(matrix.transpose(),dtype=int))
 
-        S = sparse.lil_matrix((contigs,contigs))              
+        
+        S = sparse.lil_matrix((contigs,contigs))
+        i = 0 
         for A,B in combinations(range(contigs),2):
             # choose(a, k) * choose(C - a, b - k) / choose(C, b)
             # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k) 
             pval = stats.hypergeom(pcs, number_of_pc[A], number_of_pc[B]).sf(commons_pc[A,B]) 
             sig = np.nan_to_num(-np.log10(pval*T))
+            #logging.debug("H({0},{1},{2}) {3} : {4}".format(pcs,number_of_pc[A], number_of_pc[B],commons_pc[A,B],pval))
             if sig>thres:
                 S[min(A,B),max(A,B)] = sig
-        logging.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz))
+            i += 1
+            if i%1000 == 0:
+                sys.stdout.write(".")
+            if i%10000 == 0:
+                sys.stdout.write(" {}/{}\n".format(i,T))
+
+        logging.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz()))
         S += S.T
         return S
 
@@ -135,7 +159,7 @@ class PCMatrix(object):
                                                    matrix[r,c])]))
                 f.write("\n")
 
-        logging.debug("Saving network in file {} ({} lines).".format(fi,matrix.getnnz()))
+        logging.debug("Saving network in file {0} ({1} lines).".format(fi,matrix.getnnz()))
         return fi
 
 

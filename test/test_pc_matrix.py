@@ -19,11 +19,11 @@ def setup():
                                         [1,0,1,0,0,0],
                                         [0,0,0,0,0,0], 
                                         [0,1,0,0,0,0]])
-    F["contigs"] = pandas.DataFrame({"name":["c_{}".format(i) for i in range(6)],
+    F["contigs"] = pandas.DataFrame({"name":["c_{0}".format(i) for i in range(6)],
                                      "family": ["a","b","a","a","c","b"],
                                      "genus": ["a","b",None,"a","d","c"], # contig 2 has no known genus 
                                      "origin": ["test"]*6}).set_index("name")
-    F["ref_proteins"] = pandas.DataFrame({"protein_id":["prot_{}".format(i) for i in range(12)],
+    F["ref_proteins"] = pandas.DataFrame({"protein_id":["prot_{0}".format(i) for i in range(12)],
                                           "contig": ["c_0","c_0",
                                                      "c_1","c_1","c_1",
                                                      "c_2","c_2","c_2",
@@ -32,14 +32,14 @@ def setup():
                                                      "c_0"], #prot not in the clustering
                                           "function": ["test"]*12}).set_index("protein_id")
     
-    F["cluster_proteins"] =  pandas.DataFrame({"protein_id":["prot_{}".format(i) for i in range(11)],
-                                               "cluster": ["pc_{}".format(i) for i in [1,2,
+    F["cluster_proteins"] =  pandas.DataFrame({"protein_id":["prot_{0}".format(i) for i in range(11)],
+                                               "cluster": ["pc_{0}".format(i) for i in [1,2,
                                                                                        0,2,3,
                                                                                        0,1,2,
                                                                                        1,2,
                                                                                        3]]}).set_index("protein_id")
     
-    F["clusters"] = pandas.DataFrame({"name":["pc_{}".format(i) for i in range(4)],
+    F["clusters"] = pandas.DataFrame({"name":["pc_{0}".format(i) for i in range(4)],
                                       "size": [10,20,10,5]}).set_index("name")
 
     F["PCM"] = pc_matrix.PCMatrix(F["cluster_proteins"], F["clusters"],
@@ -51,6 +51,8 @@ def test_matrix():
 
 def test_hypergeom():
     np.testing.assert_array_equal(F["PCM"].network(F["matrix"]).todense()>0, F["network_hypergeom"])
+
+def test_save_netwk():
     F["PCM"].to_mcl( F["network_hypergeom"],"test.ntwk")
 
     

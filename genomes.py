@@ -39,7 +39,7 @@ class Genomes(object):
 
         if not "metadata" in store:
             # Metadata 
-            fi_meta = os.path.expanduser("~/data/tara/tara_station_metadata.csv") if fi_meta == None else os.path.expanduser(fi_meta)
+            fi_meta = os.path.expanduser(options.data_folder+"tara/tara_station_metadata.csv") if fi_meta == None else os.path.expanduser(fi_meta)
             meta = pandas.read_csv(fi_meta)
             meta["Station"] = ["".join(k.split("_")) for k in meta["Station"]]
             meta = meta.set_index("Station")
@@ -47,7 +47,7 @@ class Genomes(object):
             
         # Contigs
         if not "contigs" in store:
-            fi_fna = os.path.expanduser("~/data/tara/tara_contigs.txt") if fi_fna == None else os.path.expanduser(fi_fna) 
+            fi_fna = os.path.expanduser(options.data_folder+"tara/contigs10.txt") if fi_fna == None else os.path.expanduser(fi_fna) 
             contigs = {"name":[],
                       "origin":[]}
 
@@ -63,7 +63,7 @@ class Genomes(object):
             store.append('contigs',contigs,format='table',data_columns=True)
 
         if not "proteins" in store:
-            fi_faa = os.path.expanduser("~/data/tara/tara_prots.txt") if fi_faa == None else os.path.expanduser(fi_faa)
+            fi_faa = os.path.expanduser(options.data_folder+"tara/tara_c10_prots.txt") if fi_faa == None else os.path.expanduser(fi_faa)
             proteins = {"protein_id":[],
                         "contig":[]}
 
