@@ -106,7 +106,7 @@ class Genomes(object):
                       "genus":[],}
 
             proteins = {"protein_id":[],
-                        "genome":[],
+                        "contig":[],
                         "function":[],}
 
             # Reading the gbff file thanks to BioPython
@@ -127,7 +127,7 @@ class Genomes(object):
                 for feature in r.features:
                     if "protein_id" in feature.qualifiers:
                         proteins["protein_id"].append(feature.qualifiers["protein_id"][0].split(".")[0])
-                        proteins["genome"].append(name)
+                        proteins["contig"].append(name)
                         proteins["function"].append(feature.qualifiers["product"][0])
 
 

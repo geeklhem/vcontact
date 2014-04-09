@@ -11,10 +11,9 @@ p = protein_clusters.ProteinClusters(options.data_folder+"tara/tara_contigs10_an
 
 pcm = pc_matrix.PCMatrix(p.data.proteins,p.data.clusters,
                          g.data.proteins, g.data.contigs)
-                                    
-pcm.ntw = pcm.network(pcm.matrix)
 
-with open(options.data_folder+"pcm.pkle", 'wb') as f:
-        pickle.dump(pcm,f)
-
-pcm.to_mcl(pcm.ntw,"{0}.ntwk".format(fi))
+def network():
+        pcm.ntw = pcm.network(pcm.matrix)
+        with open(options.data_folder+"pc_matrix_object.pkle", 'wb') as f:
+                pickle.dump(pcm,f)
+        pcm.to_mcl(pcm.ntw,"{0}.ntwk".format(options.data_folder+"tara"))

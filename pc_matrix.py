@@ -38,10 +38,10 @@ class PCMatrix(object):
         self.features = clusters.reset_index() 
         self.features["pos"] = self.features.index
 
-        logging.debug("Contigs:\n {0}".format(self.contigs.head()))
-        logging.debug("Features:\n {0}".format(self.features.head()))
-        logging.debug("Proteins_clusters:\n {0}".format(cluster_proteins.head()))
-        logging.debug("Proteins_ref:\n {0}".format(ref_proteins.head()))
+        #logging.debug("Contigs:\n {0}".format(self.contigs.head()))
+        #logging.debug("Features:\n {0}".format(self.features.head()))
+        #logging.debug("Proteins_clusters:\n {0}".format(cluster_proteins.head()))
+        #logging.debug("Proteins_ref:\n {0}".format(ref_proteins.head()))
 
 
         self.matrix = self.load(ref_proteins,cluster_proteins) 
@@ -57,21 +57,21 @@ class PCMatrix(object):
         - contigs (pandas.Dataframe)
         """
         pc = ref_proteins.join(cluster_proteins,how="right")
-        logging.debug("Merge 0 :\n {0}".format(pc.head()))
+        #logging.debug("Merge 0 :\n {0}".format(pc.head()))
         
         pc = pandas.merge(pc , self.features,
                           left_on="cluster",right_on="name").loc[:,["contig","pos"]].drop_duplicates()
     
-        logging.debug("Merge 1 :\n {0}".format(pc.head()))
+        #logging.debug("Merge 1 :\n {0}".format(pc.head()))
         pc = pandas.merge(pc, self.contigs,
                           left_on="contig", right_on="name",
                           suffixes=["_cluster","_contig"] ).loc[:,["pos_contig","pos_cluster"]]
 
-        logging.debug("Merge 2 :\n {0}".format(pc.head()))
+        #logging.debug("Merge 2 :\n {0}".format(pc.head()))
 
         matrix = sparse.coo_matrix(([1]*len(pc),(zip(*pc.values))),dtype="bool")
         matrix = sparse.csr_matrix(matrix)
-        logging.debug("P/A Matrix {0[0]} genomes by {0[1]} protein clusters.".format(matrix.shape))
+        logging.debug("P/A Matrix {0[0]} contigs by {0[1]} protein clusters.".format(matrix.shape))
         return matrix 
 
     def network(self,matrix,thres=1):

@@ -19,7 +19,7 @@ class ProteinClusters(object):
     def __len__(self):
         return len(self.data.clusters)
 
-    def load_clusters(self,fi):
+    def load_clusters(self,fi,):
         """
         Load given clusters file
         Arguments:
@@ -44,7 +44,7 @@ class ProteinClusters(object):
                     clusters["size"].append(len(l))
                     proteins["cluster"] += ["pc_{}".format(C)] * len(l)
                     try :
-                        proteins["protein_id"] += [re.search('([NY][CP]_[0-9]*|^[0-9]{2,3}[A-Z]{3}[0-9_]*)', prot).group(1) for prot in l]
+                        proteins["protein_id"] += [re.search(options.contig_name_regex, prot).group(1) for prot in l]
                     except AttributeError as e:
                         print prot
                         raise
@@ -54,4 +54,5 @@ class ProteinClusters(object):
 
         return store 
 
+    
         
