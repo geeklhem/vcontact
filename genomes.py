@@ -3,6 +3,7 @@ from Bio import SeqIO
 import logging
 import os
 import options
+import numpy as np
 
 class Genomes(object):
     """
@@ -78,7 +79,7 @@ class Genomes(object):
             store.append('proteins',proteins,format='table',data_columns=True)
         return store
             
-    def load_refseq(self,fi=None,fi_taxa = None,h5_name="refseq.h5"):
+    def load_refseq(self,fi=None,fi_taxa = None,contig_id_eq_prot_id=True,h5_name="refseq.h5"):
         """
         INPUT :
         - fi (str), a genebak file.
@@ -130,6 +131,12 @@ class Genomes(object):
                         proteins["contig"].append(name)
                         proteins["function"].append(feature.qualifiers["product"][0])
 
+            if contig_id_eq_prot_id:
+                for c in frozenset(proteins["contigs"]):
+                    proteins["protein_id"].append(c) 
+                    proteins["contig"].append(c)
+                    proteins["function"].append(np.nan)
+                    
 
             genome = pandas.DataFrame(genome).set_index("name")
             genome["origin"] = "refseq_jan14"

@@ -13,7 +13,7 @@ class GenomeCluster(object):
         if isinstance(pcm,pc_matrix.PCMatrix):
             self.features = pcm.features
             self.contigs = pcm.contigs
-            self.network = pcm.network
+            self.network = pcm.ntw
         else:
             self.features,self.contigs,self.network = pcm
 
@@ -55,18 +55,20 @@ class GenomeCluster(object):
         network = self.network if network == None else network
         contigs = self.contigs if contigs == None else contigs
         features = self.features if features == None else features
-        
-        network = (network - np.min(network)) / (np.max(network) - np.min(network))
+
+        network = network.tocsr()
+        network = (network - network.min()) / (network.min() - network.max())
         B_sum = np.hstack([network.sum(1)]*len(mcl_results)) #Sum of weights linking to a given target.
 
         
         # A list giving the columns of the i-th cluster members :
-        logging.debug(contigs)
+        #logging.debug(contigs)
         clusters = [contigs.query("name in members").ix[:,"pos"].values for members in mcl_results]
-        print clusters
+        #print clusters
         B_clust = np.hstack([network[:,cols].sum(1) for cols in clusters])
 
-
+        print B_clust.sum()
+        print B_sum.sum()
         B = B_clust/B_sum
         B = np.nan_to_num(B)
         return B
@@ -194,3 +196,10 @@ class GenomeCluster(object):
         return aff
     
 
+    def routine(self):
+        self.M  = self.membership_matrix(self.mcl_results)
+        self.Kf = self.reference_membership_matrix("family")
+        self.Kg = self.reference_membership_matrix("genus")
+        self.QRPA_f = self.correspondence_matrix(self.Kf,self.B)
+        self.QRPA_g = self.correspondence_matrix(self.Kg,self.B)
+        
