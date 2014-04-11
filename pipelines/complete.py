@@ -15,6 +15,7 @@ import subprocess
 import vcontact.options as options
 import vcontact.genomes as genomes
 import vcontact.protein_clusters as protein_clusters
+import vcontact.genomes_clusters as genome_clusters
 import vcontact.pc_matrix as pc_matrix
 import time
 
@@ -116,18 +117,36 @@ if __name__ == "__main__":
         if step_list[args.step]<3:
             logger.info("  Network")
             p = protein_clusters.ProteinClusters(options.folders["proteins"]+name+".clusters")
-            pcm = pc_matrix.PCMatrix(p.data.proteins,p.data.clusters,
-                                     g.data.proteins, g.data.contigs)
-            pcm.ntw = pcm.network(pcm.matrix)
-            
             path = options.folders["contigs"]+name
-            with open(path+"_pc_matrix.pkle", 'wb') as f:
-                pickle.dump(pcm,f)
-            pcm.to_mcl(pcm.ntw,"{0}.ntwk".format(path))
+            pcm_pklefile = path+"_pc_matrix.pkle"
+            if overwrite or not os.path.isfile(pcm_pklefile):
+                pcm = pc_matrix.PCMatrix(p.data.proteins,p.data.clusters,
+                                         g.data.proteins, g.data.contigs)
+                pcm.ntw = pcm.network(pcm.matrix)
 
 
+                with open(pcm_pklefile, 'wb') as f:
+                    pickle.dump(pcm,f)
+            else:
+                with open(pcm_pklefile, 'rb') as f:
+                    pcm = pickle.dump(f)
 
+            if overwrite or not os.path.isfile(path+".ntwk"):
+                pcm.to_mcl(pcm.ntw,"{0}.ntwk".format(path))
 
+        ### STEP 3: CONTIGS CLUSTERS
+        if step_list[args.step]<4:
+            path = options.folders["contigs"]+name
+            call("mcl {}.ntwk -I 2 -o {0}_contigs.clusters".format(path),path+"_contigs.clusters")
+            gc_pklefile = path+"_contig_clusters.pkle"
+            if overwrite or not os.path.isfile(gc_pklefile):
+                gc = genome_clusters.GenomeCluster(pcm,mcl_file=path+"_contigs.clusters")
+                gc.routine()
+                with open(gc_pklefile, 'wb') as f:
+                    pickle.dump(gc,f)
+            else:
+                with open(gc_pklefile, 'rb') as f:
+                    gc = pickle.dump(f)
 
 
 
