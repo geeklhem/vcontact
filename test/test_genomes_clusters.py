@@ -10,13 +10,14 @@ import pandas.util.testing as ptest
 F = {} # fixtures
 def teardown():
     os.remove("mcl_results")
+    
 def setup():
-    F["network_hypergeom"] = np.matrix([[0,0,1,1,0,0],
-                                        [0,0,0,0,0,1],
-                                        [1,0,0,1,0,0],
-                                        [1,0,1,0,0,0],
-                                        [0,0,0,0,0,0], 
-                                        [0,1,0,0,0,0]])
+    F["network_hypergeom"] = sparse.lil_matrix(np.matrix([[0,0,1,1,0,0],
+                                                          [0,0,0,0,0,1],
+                                                          [1,0,0,1,0,0],
+                                                          [1,0,1,0,0,0],
+                                                          [0,0,0,0,0,0], 
+                                                          [0,1,0,0,0,0]]))
 
     F["B"] = np.matrix([[1,0],
                         [0,1],
@@ -111,6 +112,16 @@ def setup():
                                  "predicted_family":["a","b","a","a","b",],
                                  "predicted_genus":["a","b","a","a","b",]})
 
+    F["summary"] = pandas.DataFrame({"clustering_wise_precision":[1,0.8],
+                                     "clustering_wise_recall":[5/6.,0.8],
+                                     "clustering_wise_accuracy":[np.sqrt(5/6.),0.8],
+                                     "level":["family","genus"],
+                                     "name":["gc","gc"],
+                                     "classes":[2,4],
+                                     "sensitivity":[1.0,0.5],
+                                     "correctness":[1,0.5],
+                                  })
+    
 
 def test_membership_matrix():
     np.testing.assert_array_equal(F["gc"].membership_matrix(F["gc"].mcl_results,F["network_hypergeom"]),
@@ -173,3 +184,17 @@ def test_associations():
                              F["aff"].sort(axis=1).set_index("name").sort(),
                              check_dtype=False)
     
+def test_routine():
+    F["gc"].routine()
+    print "\n{:=^80}".format("REFERENCE")
+    print F["summary"].sort(axis=1).set_index("level").sort(),
+
+    print "\n{:=^80}".format("OUTPUT")
+    print F["gc"].summary.sort(axis=1).set_index("level").sort()
+    
+    ptest.assert_frame_equal(F["gc"].summary.sort(axis=1).set_index("level").sort(),
+                             F["summary"].sort(axis=1).set_index("level").sort(),
+                             check_dtype=False)
+    
+
+

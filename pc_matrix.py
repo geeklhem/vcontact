@@ -43,9 +43,9 @@ class PCMatrix(object):
         #logging.debug("Proteins_clusters:\n {0}".format(cluster_proteins.head()))
         #logging.debug("Proteins_ref:\n {0}".format(ref_proteins.head()))
 
+        self.matrix = self.load(ref_proteins,cluster_proteins)
+        self.ntw = self.network(self.matrix)
 
-        self.matrix = self.load(ref_proteins,cluster_proteins) 
-    
     def load(self,ref_proteins,cluster_proteins):
         """Load a Protein cluster presence/absence matrix from a
         ProteinClusters object.
@@ -83,24 +83,27 @@ class PCMatrix(object):
         
         # Number of common protein clusters between two contigs 
         commons_pc = matrix.dot(sparse.csr_matrix(matrix.transpose(),dtype=int))
+        
 
         
         S = sparse.lil_matrix((contigs,contigs))
-        i = 0 
-        for A,B in combinations(range(contigs),2):
-            # choose(a, k) * choose(C - a, b - k) / choose(C, b)
-            # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k) 
-            pval = stats.hypergeom(pcs, number_of_pc[A], number_of_pc[B]).sf(commons_pc[A,B]) 
-            sig = np.nan_to_num(-np.log10(pval*T))
-            #logging.debug("H({0},{1},{2}) {3} : {4}".format(pcs,number_of_pc[A], number_of_pc[B],commons_pc[A,B],pval))
-            if sig>thres:
-                S[min(A,B),max(A,B)] = sig
-            i += 1
-            if i%1000 == 0:
-                sys.stdout.write(".")
-            if i%10000 == 0:
-                sys.stdout.write(" {}/{}\n".format(i,T))
+        i = 0
+        total_c = float(commons_pc.getnnz())
+        for A,B in zip(*commons_pc.nonzero()) : # combinations(range(contigs),2):
+            if A != B:
+                # choose(a, k) * choose(C - a, b - k) / choose(C, b)
+                # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k) 
+                pval = stats.hypergeom.sf(commons_pc[A,B],pcs, number_of_pc[A], number_of_pc[B]) 
+                sig = np.nan_to_num(-np.log10(pval*T))
 
+                if sig>thres:
+                    S[min(A,B),max(A,B)] = sig
+                i += 1
+                if i%1000 == 0:
+                    sys.stdout.write(".")
+                if i%10000 == 0:  
+                    sys.stdout.write("{:6.2%} {}/{}\n".format(i/total_c,i,total_c))
+                    
         logging.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz()))
         S += S.T
         return S

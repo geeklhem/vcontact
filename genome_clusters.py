@@ -6,10 +6,11 @@ import pandas
 import cPickle as pickle
 class GenomeCluster(object):
     
-    def __init__(self,pcm,mcl_file=None ):
+    def __init__(self,pcm,mcl_file=None,name="gc"):
         """
         pcm : PCMatrix object or tuble features (pandas df),contigs (pandas df),network (sparse matriex).
         """
+        self.name = name
         if isinstance(pcm,pc_matrix.PCMatrix):
             self.features = pcm.features
             self.contigs = pcm.contigs
@@ -56,8 +57,9 @@ class GenomeCluster(object):
         contigs = self.contigs if contigs == None else contigs
         features = self.features if features == None else features
 
-        network = network.tocsr()
+        network = network.todense()
         network = (network - network.min()) / (network.min() - network.max())
+
         B_sum = np.hstack([network.sum(1)]*len(mcl_results)) #Sum of weights linking to a given target.
 
         
@@ -194,12 +196,46 @@ class GenomeCluster(object):
                    inplace=True)
 
         return aff
-    
+
+
 
     def routine(self):
-        self.M  = self.membership_matrix(self.mcl_results)
+        self.B  = self.membership_matrix(self.mcl_results)
         self.Kf = self.reference_membership_matrix("family")
         self.Kg = self.reference_membership_matrix("genus")
         self.QRPA_f = self.correspondence_matrix(self.Kf,self.B)
         self.QRPA_g = self.correspondence_matrix(self.Kg,self.B)
-        
+        self.aff = self.affiliate(self.B)
+        summary = {"clustering_wise_precision":[],
+                   "clustering_wise_recall":[],
+                   "clustering_wise_accuracy":[],
+                   "level":[],
+                   "name":[],
+                   "classes":[],
+                   "sensitivity":[],
+                   "correctness":[],
+                   }
+
+        for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
+            
+            cwp,cwr =  self.clustering_wise_pr(QRPA[2], QRPA[1], self.B, K)
+            summary["clustering_wise_precision"].append(cwp)
+            summary["clustering_wise_recall"].append(cwr)
+            summary["clustering_wise_accuracy"].append(np.sqrt(cwp*cwr))
+            summary["level"].append(level)
+            summary["name"].append(self.name)
+            sensitivity,correctness = 0,0
+            for cat in frozenset(self.aff.loc[:,"reference_{}".format(level)].values):
+                aff        = self.aff.query("reference_{}=='{}'".format(level,cat))
+                TP         = len(aff.query("predicted_{0}==reference_{0}".format(level)))
+                known      = len(aff)
+                classified = len(self.aff.query("predicted_{}=='{}'".format(level,cat)))
+                if TP:
+                    sensitivity += float(TP)/float(known)
+                    correctness += float(TP)/float(classified)
+            summary["classes"].append(len(self.aff.loc[:,"reference_{}".format(level)].drop_duplicates()))
+            summary["sensitivity"].append(sensitivity/summary["classes"][-1])
+            summary["correctness"].append(sensitivity/summary["classes"][-1])
+                   
+            
+        self.summary = pandas.DataFrame(summary)
