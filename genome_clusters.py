@@ -69,8 +69,8 @@ class GenomeCluster(object):
         #print clusters
         B_clust = np.hstack([network[:,cols].sum(1) for cols in clusters])
 
-        print B_clust.sum()
-        print B_sum.sum()
+        #print B_clust.sum()
+        #print B_sum.sum()
         B = B_clust/B_sum
         B = np.nan_to_num(B)
         return B
@@ -234,8 +234,18 @@ class GenomeCluster(object):
                     sensitivity += float(TP)/float(known)
                     correctness += float(TP)/float(classified)
             summary["classes"].append(len(self.aff.loc[:,"reference_{}".format(level)].drop_duplicates()))
-            summary["sensitivity"].append(sensitivity/summary["classes"][-1])
-            summary["correctness"].append(sensitivity/summary["classes"][-1])
+            if sensitivity:
+                summary["sensitivity"].append(sensitivity/summary["classes"][-1])
+            else:
+                summary["sensitivity"].append(0)
+
+            if correctness:
+                summary["correctness"].append(correctness/summary["classes"][-1])
+            else:
+                summary["correctness"].append(0)
+
+
                    
             
         self.summary = pandas.DataFrame(summary)
+        logging.debug(self.summary)
