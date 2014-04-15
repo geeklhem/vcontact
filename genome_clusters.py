@@ -183,18 +183,20 @@ class GenomeCluster(object):
                             right_on="pos",
                             suffixes=["","_clusters"]).loc[:,( "name","family","genus",
                                                                "pos_family", "pos_genus", "membership")].sort(axis=1)
+        #print aff 
         for l in ("family","genus"):
             aff = pandas.merge(aff,self.taxonomy.query("level=='{}'".format(l)).loc[:,("pos","name")],
                                left_on="pos_{}".format(l), right_on="pos",
                                suffixes=["","_{}".format(l)])
 
+        #print aff 
         aff = aff.drop(["pos","pos_family","pos_genus"],1)
         aff.rename(columns={"name_family":"predicted_family",
                             "name_genus":"predicted_genus",
                             "family":"reference_family",
                             "genus":"reference_genus"},
                    inplace=True)
-
+        #print aff
         return aff
 
 
@@ -205,15 +207,22 @@ class GenomeCluster(object):
         self.Kg = self.reference_membership_matrix("genus")
         self.QRPA_f = self.correspondence_matrix(self.Kf,self.B)
         self.QRPA_g = self.correspondence_matrix(self.Kg,self.B)
+        self.associations(self.QRPA_f[2],self.QRPA_f[1],"family")
+        self.associations(self.QRPA_g[2],self.QRPA_g[1],"genus")
         self.aff = self.affiliate(self.B)
         summary = {"clustering_wise_precision":[],
                    "clustering_wise_recall":[],
-                   "clustering_wise_accuracy":[],
                    "level":[],
                    "name":[],
                    "classes":[],
-                   "sensitivity":[],
-                   "correctness":[],
+                   "recall_micro":[],
+                   "precision_micro":[],
+                   "specificity_micro":[],
+                   "accuracy_micro":[],
+                   "recall_macro":[],
+                   "precision_macro":[],
+                   "specificity_macro":[],
+                   "accuracy_macro":[]
                    }
 
         for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
@@ -221,31 +230,46 @@ class GenomeCluster(object):
             cwp,cwr =  self.clustering_wise_pr(QRPA[2], QRPA[1], self.B, K)
             summary["clustering_wise_precision"].append(cwp)
             summary["clustering_wise_recall"].append(cwr)
-            summary["clustering_wise_accuracy"].append(np.sqrt(cwp*cwr))
             summary["level"].append(level)
             summary["name"].append(self.name)
-            sensitivity,correctness = 0,0
-            for cat in frozenset(self.aff.loc[:,"reference_{}".format(level)].values):
-                aff        = self.aff.query("reference_{}=='{}'".format(level,cat))
-                TP         = len(aff.query("predicted_{0}==reference_{0}".format(level)))
-                known      = len(aff)
-                classified = len(self.aff.query("predicted_{}=='{}'".format(level,cat)))
+            classes = self.aff.loc[:,"reference_{}".format(level)].drop_duplicates().dropna().values
+
+            summary["classes"].append(len(classes)) 
+
+            summary["recall_micro"].append(0)
+            summary["precision_micro"].append(0)
+            summary["specificity_micro"].append(0)
+            summary["accuracy_micro"].append(0)
+
+            conf = {"TP":0,"TN":0,"FP":0,"FN":0}
+            aff = self.aff.dropna(subset=["reference_{0}".format(level)])
+            for cat in classes :
+                TP = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}=='{1}'".format(level,cat))))
+                TN = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}!='{1}'".format(level,cat))))
+                FP = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}=='{1}'".format(level,cat))))
+                FN = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}!='{1}'".format(level,cat))))
+                conf["TP"] += TP
+                conf["TN"] += TN
+                conf["FP"] += FP
+                conf["FN"] += FN
                 if TP:
-                    sensitivity += float(TP)/float(known)
-                    correctness += float(TP)/float(classified)
-            summary["classes"].append(len(self.aff.loc[:,"reference_{}".format(level)].drop_duplicates()))
-            if sensitivity:
-                summary["sensitivity"].append(sensitivity/summary["classes"][-1])
-            else:
-                summary["sensitivity"].append(0)
-
-            if correctness:
-                summary["correctness"].append(correctness/summary["classes"][-1])
-            else:
-                summary["correctness"].append(0)
-
-
-                   
+                    summary["recall_micro"][-1] += TP / (TP+FN)
+                    summary["precision_micro"][-1] += TP / (TP+FP)
+                if TN:
+                    summary["specificity_micro"][-1]+= TN / (FP + TN)
+                summary["accuracy_micro"][-1] += (TP + TN) / (TP+FP+FN+TN)
+                
+            summary["recall_macro"].append(conf["TP"]/(conf["TP"]+conf["FN"]))
+            summary["precision_macro"].append(conf["TP"]/(conf["TP"]+conf["FP"]))
+            summary["specificity_macro"].append(conf["TN"]/(conf["FP"]+conf["TN"]))
+            summary["accuracy_macro"].append((conf["TP"]+conf["TN"])/(conf["TP"]+conf["TN"]+conf["FP"]+conf["FN"]))
+            summary["recall_micro"][-1] /= len(classes)
+            summary["precision_micro"][-1] /= len(classes)
+            summary["specificity_micro"][-1]/= len(classes)
+            summary["accuracy_micro"][-1] /= len(classes)
             
+
+
+
         self.summary = pandas.DataFrame(summary)
         logging.debug(self.summary)

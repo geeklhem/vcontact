@@ -111,16 +111,30 @@ def setup():
                                  "name": ["c_0","c_1","c_2","c_3","c_5"],
                                  "predicted_family":["a","b","a","a","b",],
                                  "predicted_genus":["a","b","a","a","b",]})
-
+    # --------| TP | TN | FP | FN | R | P | S | A 
+    #---------|-----------------------------------
+    # Fam   A |  3 | 2  | 0  | 0  | 1 | 1 | 1 | 1
+    # Fam   B |  2 | 3  | 0  | 0  | 1 | 1 | 1 | 1
+    #---------|-----------------------------------
+    # Genus A |  2 | 2  | 0  | 0  | 1 | 1 | 1 | 1
+    # Genus B |  1 | 2  | 1  | 0  | 1 | .5|2/3|3/4
+    # Genus C |  0 | 3  | 0  | 1  | 0 | 0 | 1 |3/4
+    # SUM ----|  3 | 7  | 1  | 1  |3/4|3/4|7/8|10/12
+    
     F["summary"] = pandas.DataFrame({"clustering_wise_precision":[1,0.8],
                                      "clustering_wise_recall":[5/6.,0.8],
-                                     "clustering_wise_accuracy":[np.sqrt(5/6.),0.8],
                                      "level":["family","genus"],
                                      "name":["gc","gc"],
-                                     "classes":[2,4],
-                                     "sensitivity":[1.0,0.5],
-                                     "correctness":[1,0.5],
-                                  })
+                                     "classes":[2,3],
+                                     "recall_micro":[1,2/3.0],
+                                     "precision_micro":[1,1.5/3],
+                                     "specificity_micro":[1,8/9.0],
+                                     "accuracy_micro":[1,10/12.0],
+                                     "recall_macro":[1,3/4.],
+                                     "precision_macro":[1,3/4.],
+                                     "specificity_macro":[1,7/8.],
+                                     "accuracy_macro":[1,10/12.0]
+                                 })
     
 
 def test_membership_matrix():
