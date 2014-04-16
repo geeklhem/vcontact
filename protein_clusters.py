@@ -5,6 +5,7 @@ import logging
 import os
 import options
 import re 
+from genomes import pid as pid  
 
 class ProteinClusters(object):
     """
@@ -30,7 +31,6 @@ class ProteinClusters(object):
         h5_name = ''.join(os.path.basename(fi).split(".")[:-1])+".h5"
         store =  pandas.HDFStore(options.cache_folder+h5_name)
 
-
         if "proteins" not in store or "clusters" not in store:  
             proteins = {"protein_id":[],
                         "cluster":[]}
@@ -44,7 +44,8 @@ class ProteinClusters(object):
                     clusters["size"].append(len(l))
                     proteins["cluster"] += ["pc_{}".format(C)] * len(l)
                     try :
-                        proteins["protein_id"] += [re.search(options.contig_name_regex, prot).group(1) for prot in l]
+                        proteins["protein_id"] += [pid(prot) for prot in l]
+                        
                     except AttributeError as e:
                         print prot
                         raise

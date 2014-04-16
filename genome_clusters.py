@@ -222,7 +222,10 @@ class GenomeCluster(object):
                    "recall_macro":[],
                    "precision_macro":[],
                    "specificity_macro":[],
-                   "accuracy_macro":[]
+                   "accuracy_macro":[],
+                   "contigs":[],
+                   "affiliated_contigs":[],
+                   "reference_contigs":[],
                    }
 
         for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
@@ -234,7 +237,9 @@ class GenomeCluster(object):
             summary["name"].append(self.name)
             classes = self.aff.loc[:,"reference_{}".format(level)].drop_duplicates().dropna().values
 
-            summary["classes"].append(len(classes)) 
+            summary["classes"].append(len(classes))
+            summary["contigs"].append(len(self.contigs))
+
 
             summary["recall_micro"].append(0)
             summary["precision_micro"].append(0)
@@ -243,6 +248,8 @@ class GenomeCluster(object):
 
             conf = {"TP":0,"TN":0,"FP":0,"FN":0}
             aff = self.aff.dropna(subset=["reference_{0}".format(level)])
+            summary["affiliated_contigs"].append(len(self.aff))
+            summary["reference_contigs"].append(len(aff)) 
             for cat in classes :
                 TP = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}=='{1}'".format(level,cat))))
                 TN = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}!='{1}'".format(level,cat))))

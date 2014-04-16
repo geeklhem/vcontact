@@ -4,13 +4,14 @@ import logging
 import os
 import options
 import numpy as np
+import re
 
 class Genomes(object):
     """
     Data about reference genomes, object built from the refseq gbff file.
     """
     
-    def __init__(self, refseq=True,tara=False):
+    def __init__(self, refseq=True,tara=False,refseq_contigs=False):
         """
         
         Arguments:
@@ -22,14 +23,20 @@ class Genomes(object):
             self.data = self.load_tara()
         if refseq and tara:
             self.data = pandas.HDFStore(options.cache_folder+"all_contigs.h5")
-            if not "contigs" in self.data:
-  
+            if not "contigs" in self.data: 
                 refseq = self.load_refseq()
                 tara = self.load_tara()
                 self.data.append('contigs',pandas.concat((tara.contigs,refseq.contigs)),format='table', data_columns=True)
                 self.data.append('proteins',pandas.concat((tara.proteins,refseq.proteins)),format='table', data_columns=True)
                 self.data.append('metadata',tara.metadata,format='table')
-
+        if refseq and refseq_contigs:
+            self.data = pandas.HDFStore(options.cache_folder+"all_refseq_contigs.h5")
+            if not "contigs" in self.data: 
+                refseq = self.load_refseq()
+                contigs = self.load_contigs_refseq()
+                self.data.append('contigs',pandas.concat((contigs.contigs,refseq.contigs)),format='table', data_columns=True)
+                self.data.append('proteins',pandas.concat((contigs.proteins,refseq.proteins)),format='table', data_columns=True)
+                
         
     def load_tara(self,h5_name = "tara.h5",fi_faa=None,fi_fna=None,fi_meta=None):
         """
@@ -131,12 +138,7 @@ class Genomes(object):
                         proteins["contig"].append(name)
                         proteins["function"].append(feature.qualifiers["product"][0])
 
-            if contig_id_eq_prot_id:
-                for c in frozenset(proteins["contigs"]):
-                    proteins["protein_id"].append(c) 
-                    proteins["contig"].append(c)
-                    proteins["function"].append(np.nan)
-                    
+                 
 
             genome = pandas.DataFrame(genome).set_index("name")
             genome["origin"] = "refseq_jan14"
@@ -154,6 +156,81 @@ class Genomes(object):
         
 
     
+    def load_contigs_refseq(self,fi=None,fi_taxa=None,h5_name="refseq_contigs.h5"):
+        """
+        INPUT :
+        - fi (str), a genebak file.
+        OUTPUT : 
+        - names (list) The genomes names (Index2genome)
+        - taxonomy (dict of list) map genome name on the list of taxonomic levels
+        - prot2genome (dict) map protein name to genome name
+        """
+        logging.warning("Loading Refseq contigs")
+        # Loading taxonomic classes 
+        fi = os.path.expanduser(options.data_folder+"contigs_refseq/proteins_names") if not fi else fi 
+        fi_taxa = os.path.expanduser(options.data_folder+"ncbi_taxdump/refseqphage_taxa.pkl") if not fi_taxa else fi_taxa  
 
 
+        store =  pandas.HDFStore(options.cache_folder+h5_name)
 
+        if "contigs" not in store or "proteins" not in store:
+            taxa = pandas.read_pickle(fi_taxa)
+            families = frozenset(taxa[taxa["Rank"]=="family"]["Name"])
+            genera = frozenset(taxa[taxa["Rank"]=="genus"]["Name"])
+
+
+            genome = {"name":[],
+                      "ref_genome":[],
+                      "origin":[]}
+
+            proteins = {"protein_id":[],
+                        "contig":[],}
+
+            # Reading the gbff file thanks to BioPython
+            with open(fi,'rb') as f:
+                for r in f:
+                    prot_name = pid(r)
+                    splited = prot_name.split("_")
+                    contig_name = "_".join(splited[:-1])
+                    genome_name = "_".join(splited[:2])
+
+                    if len(splited) != 4:
+                        logging.error("line: {}\n pid: {}\n contig {} \n genome {}".format(r,prot_name,contig_name,genome_name))
+                        
+                    
+                    genome["origin"].append("contigs_{}_refseq_jan14".format(r.split("-")[0]))
+                    genome["name"].append(contig_name)
+                    genome["ref_genome"].append(genome_name)
+                    proteins["protein_id"].append(prot_name)
+                    proteins["contig"].append(contig_name)
+
+            genome = pandas.DataFrame(genome).set_index("name").drop_duplicates()
+            refseq = pandas.HDFStore(options.cache_folder+"refseq.h5")
+            genome = pandas.merge(genome,refseq.contigs.drop("origin",1),left_on="ref_genome",right_index="True")
+            
+            proteins = pandas.DataFrame(proteins).set_index("protein_id")
+            
+            store.append('contigs',genome,format='table',data_columns=True)
+            store.append('proteins',proteins,format='table',data_columns=True)
+            
+            nf = len(genome) - genome.family.count() 
+            ng = len(genome) - genome.genus.count()
+            if nf!=0 or ng!=0 :
+                logging.warning("{0} contigs without family and {1} contigs without genus.".format(nf,ng))
+
+        return store 
+
+
+def pid(prot):
+    pid = re.search(options.contig_name_regex, prot).group(1)
+    simul = re.search('_(full|[0-9]*)-gene(_[0-9]*)',prot)
+    if simul:
+        pid = "{}_{}".format(pid,simul.group(1)+simul.group(2)) 
+    return pid  
+
+
+if __name__ == "__name__":
+    for opt in [(True,False,True)]:
+        print("Caching genomes with options {}".format(opt))
+        g = Genomes(*opt)
+        del g
