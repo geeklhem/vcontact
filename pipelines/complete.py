@@ -22,7 +22,8 @@ import time
 step_list = {"pblast":0,
              "mcl":1,
              "network":2,
-             "affiliate":3}
+             "affiliate":3,
+             "nostop":100}
 
 
 # Argparse config 
@@ -41,6 +42,9 @@ parser.add_argument('-f','--force-overwrite',
 parser.add_argument('--tara',
                     help='Load tara contigs and metadata',
                     action="store_true")
+parser.add_argument('--refcont',
+                    help='Load refseq simulated contigs metadata',
+                    action="store_true")
 parser.add_argument('-v','--verbose',
                     help='Verbosity level : -v warning, -vv info, -vvv debug, (default debug)',
                     action="count",
@@ -48,6 +52,9 @@ parser.add_argument('-v','--verbose',
 parser.add_argument('-i2','--inflation2',
                     help='Inflation of the second MCL',
                     default=2)
+parser.add_argument('--stop',
+                    help='Stopping step',
+                    default="nostop")
 
 
 args = parser.parse_args()
@@ -76,46 +83,96 @@ logger.info("{:.^80}".format(" AUTOMATIC TAXONOMY PIPELINE  "))
 logger.info("Started at step {} @ {}".format(args.step," ".join(os.uname())))
 
 
-g = genomes.Genomes(refseq=True,tara=args.tara)
+g = genomes.Genomes(refseq=True,tara=args.tara,refseq_contigs=args.refcont)
 
 def call(cmd,fi,overwrite=None):
     overwrite = options.overwrite if overwrite == None else overwrite
     if overwrite or not os.path.isfile(fi):
-        logger.info("Executing {} to create file {}.".format(cmd.split(" ")[0],fi))
-        subprocess.check_call(cmd, shell=True) #Security issue : vulnerable to shell injections...
+        logger.info("Executing {} to create file {}.".format(cmd.split(" ")[0],os.path.basename(fi)))
+        try:
+            subprocess.check_call(cmd, shell=True) #Security issue : vulnerable to shell injections...
+        except subprocess.CalledProcessError as e:
+            logger.error("Command {} failed ({}). Removing {}.".format(cmd.split(" ")[0],e,os.path.basename(fi)))
+            os.remove(fi)
+            raise
+        except KeyboardInterrupt as e:
+            logger.error("Command {} interrupted. Removing {}.".format(cmd.split(" ")[0],os.path.basename(fi)))
+            os.remove(fi)
+            raise 
+            
     else:
         logger.info("File {} exist, command {} aborted.".format(fi,cmd.split(" ")[0]))
+
+    if not os.path.isfile(fi):
+        logger.info("{1} failed to create file {}.".format(fi,cmd.split(" ")[0]))
+        raise IOError
 
 if __name__ == "__main__":
     
     os.chdir(options.data_folder)
+    refseq_faa = options.refseq_faa
+    print("{0:-^80}".format(" Refseq  "))
+    
+    logger.info("  Creating a database")
+    refseq_db = options.folders["proteins"]+"refseq.db"
+    call("formatdb -i {i} -n {o}".format(i=refseq_faa,o=refseq_db),refseq_db+".phr")
+    
+    logger.info("  All versus all blast")
+    refseq_blasted = options.folders["proteins"]+"refseq.tab"
+    call("blastall -p blastp -i {i} -d {db} -o {o} -m 8 -a 24 -e 0.00001".format(i=refseq_faa,
+                                                                                 db=refseq_db,
+                                                                                 o=refseq_blasted),
+         refseq_blasted)
+
+
+    
     for fi in args.input:
         try:
+            fi = os.path.expanduser(fi)
+
+
+            faa_basename = "_".join(os.path.basename(fi).split(".")[:-1])
             name = "_".join(os.path.basename(fi).split(".")[:-1])+"_and_refseq"
+            
             logger.info("{:.^80}".format("file : {} ".format(fi)))
 
             ### STEP 0 : PBLAST 
-            if step_list[args.step]<1:
-                print("{0:-^80}".format(" AvA PBLAST "))
+            if step_list[args.step]<1<=step_list[args.stop]+1:
+                print("{0:-^80}".format(" PBLAST "))
 
-                logger.info("  Concatenate with refseq")
-                faa = options.folders["proteins"]+name+".faa"
-                call("cat {i} {r} > {o}".format(i=fi,r=options.refseq_faa,o=faa),faa)
+                ### STEP 0.1 : CONTIGS VS REF SEQ
+                logger.info("  Contigs VS Refseq")
+                contigs_v_refseq = options.folders["proteins"]+faa_basename+"_v_refseq.tab"
+                
+                call("{cmd} -i {i} -d {db} -o {o}".format(cmd=options.blast_cmd,
+                                                          i=fi,
+                                                          db=refseq_db,
+                                                          o=contigs_v_refseq),
+                     contigs_v_refseq)
 
-                logger.info("  Creating a database")
-                db = options.folders["proteins"]+name+".db"
-                call("formatdb -i {i} -n {o}".format(i=faa,o=db),db+".phr")
-
-                logger.info("  All versus all blast")
+                ### STEP 0.2 : CONTIGS + REF SEQ VS CONTIGS
+                logger.info("  Contigs+Refseq VS Contigs")
+                c_and_r_v_c = options.folders["proteins"]+faa_basename+"_and_refseq_v_contg.tab"
+                db = options.folders["proteins"]+faa_basename+".db"
+                merged_fi = options.folders["proteins"]+faa_basename+"_and_refseq.faa"
+                
+                call("formatdb -i {i} -n {o}".format(i=fi,o=db),db+".phr")
+                call("cat {i} {r} > {o}".format(i=fi,r=options.refseq_faa,o=merged_fi),merged_fi)
+                call("{cmd} -i {i} -d {db} -o {o}".format(cmd=options.blast_cmd,
+                                                          i=merged_fi,
+                                                          db=db,
+                                                          o=c_and_r_v_c),
+                     c_and_r_v_c)
+                
+                ### STEP 0.3 : MERGING THE RESULTS
+                logger.info("  Merging results RvR, CvR and (C+R)vC")
                 blasted = options.folders["proteins"]+name+".tab"
-                call("blastall -p blastp -i {i} -d {db} -o {o} -m 8 -a 24 -e 0.00001".format(i=faa,
-                                                                                             db=db,
-                                                                                             o=blasted),
-                     blasted)
+                blast_files = [refseq_blasted, contigs_v_refseq, c_and_r_v_c]
+                call("cat {i} > {o}".format(i=" ".join(blast_files),o=blasted), blasted)
 
             ### STEP 1: MCL
-            if step_list[args.step]<2:
-                logger.info("  MCL")
+            if step_list[args.step]<2<=step_list[args.stop]+1:
+                print("{0:-^80}".format(" MCL "))
                 path = options.folders["proteins"]+name
                 call("awk '$1!=$2 {{print $1,$2,$11}}' {0}.tab > {0}.abc".format(path),path+".abc")
                 call("mcxload -abc  {0}.abc --stream-mirror --stream-neg-log10 -stream-tf 'ceil(200)' \
@@ -123,8 +180,8 @@ if __name__ == "__main__":
                 call("mcl {0}.mci -I 2 -use-tab {0}_mcxload.tab -o {0}.clusters".format(path),path+".clusters")
 
             ### STEP 2: NETWORK
-            if step_list[args.step]<3:
-                logger.info("  Network")
+            if step_list[args.step]<3<=step_list[args.stop]+1:
+                print("{0:-^80}".format(" NETWORK "))
                 p = protein_clusters.ProteinClusters(options.folders["proteins"]+name+".clusters")
                 path = options.folders["contigs"]+name
                 pcm_pklefile = path+"_pc_matrix.pkle"
@@ -142,21 +199,24 @@ if __name__ == "__main__":
                     pcm.to_mcl(pcm.ntw,"{0}.ntwk".format(path))
 
             ### STEP 3: CONTIGS CLUSTERS
-            if step_list[args.step]<4:
+            if step_list[args.step]<4<=step_list[args.stop]+1:
+                print("{0:-^80}".format(" CONTIGS CLUSTERS "))
                 path = options.folders["contigs"]+name
-                clustersfile = {0}_i_{0}_contigs.clustersformat(path,"".join(str(args.inflation2).split(".")))
-                call("mcl {0}.ntwk --abc -I {1} -o {2} ".format(path,,args.inflation2,clustersfile),clustersfile)
+                clustersfile = "{0}_i_{1}_contigs.clusters".format(path,"".join(str(args.inflation2).split(".")))
+                call("mcl {0}.ntwk --abc -I {1} -o {2} ".format(path,args.inflation2,clustersfile),clustersfile)
                 gc_pklefile = path+"_contig_clusters.pkle"
                 if options.overwrite or not os.path.isfile(gc_pklefile):
-                    gc = genome_clusters.GenomeCluster(pcm,mcl_file=path+"_contigs.clusters")
+                    gc = genome_clusters.GenomeCluster(pcm,
+                                                       mcl_file=clustersfile,
+                                                       name="".join(os.path.basename(clustersfile).split(".")[:-1]))
                     gc.routine()
                     with open(gc_pklefile, 'wb') as f:
                         pickle.dump(gc,f)
                 else:
                     with open(gc_pklefile, 'rb') as f:
                         gc = pickle.load(f)
-        except Exception:
-            logging.error("Error in {}".format(fi))
+        except Exception as e:
+            logger.error("Error {} in {}".format(e,os.path.basename(fi)))
 
 
 

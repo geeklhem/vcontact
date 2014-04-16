@@ -181,7 +181,7 @@ class GenomeCluster(object):
                             self.clusters,
                             left_on="pos_cluster",
                             right_on="pos",
-                            suffixes=["","_clusters"]).loc[:,( "name","family","genus",
+                            suffixes=["","_clusters"]).loc[:,( "name","family","genus","origin",
                                                                "pos_family", "pos_genus", "membership")].sort(axis=1)
         #print aff 
         for l in ("family","genus"):
@@ -210,6 +210,10 @@ class GenomeCluster(object):
         self.associations(self.QRPA_f[2],self.QRPA_f[1],"family")
         self.associations(self.QRPA_g[2],self.QRPA_g[1],"genus")
         self.aff = self.affiliate(self.B)
+        self.summary = self.compute_summary()
+        logging.debug(self.summary)
+
+    def compute_summary(self):
         summary = {"clustering_wise_precision":[],
                    "clustering_wise_recall":[],
                    "level":[],
@@ -224,59 +228,64 @@ class GenomeCluster(object):
                    "specificity_macro":[],
                    "accuracy_macro":[],
                    "contigs":[],
+                   "origin":[],
                    "affiliated_contigs":[],
                    "reference_contigs":[],
                    }
 
-        for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
-            
-            cwp,cwr =  self.clustering_wise_pr(QRPA[2], QRPA[1], self.B, K)
-            summary["clustering_wise_precision"].append(cwp)
-            summary["clustering_wise_recall"].append(cwr)
-            summary["level"].append(level)
-            summary["name"].append(self.name)
-            classes = self.aff.loc[:,"reference_{}".format(level)].drop_duplicates().dropna().values
+        for o in self.aff.origin.drop_duplicates().values:
+            logging.info("FILTERING AFF for {}".format(o))
+            filtered_aff = self.aff.query("origin=='{}'".format(o))
+            for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
 
-            summary["classes"].append(len(classes))
-            summary["contigs"].append(len(self.contigs))
-
-
-            summary["recall_micro"].append(0)
-            summary["precision_micro"].append(0)
-            summary["specificity_micro"].append(0)
-            summary["accuracy_micro"].append(0)
-
-            conf = {"TP":0,"TN":0,"FP":0,"FN":0}
-            aff = self.aff.dropna(subset=["reference_{0}".format(level)])
-            summary["affiliated_contigs"].append(len(self.aff))
-            summary["reference_contigs"].append(len(aff)) 
-            for cat in classes :
-                TP = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}=='{1}'".format(level,cat))))
-                TN = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}!='{1}'".format(level,cat))))
-                FP = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}=='{1}'".format(level,cat))))
-                FN = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}!='{1}'".format(level,cat))))
-                conf["TP"] += TP
-                conf["TN"] += TN
-                conf["FP"] += FP
-                conf["FN"] += FN
-                if TP:
-                    summary["recall_micro"][-1] += TP / (TP+FN)
-                    summary["precision_micro"][-1] += TP / (TP+FP)
-                if TN:
-                    summary["specificity_micro"][-1]+= TN / (FP + TN)
-                summary["accuracy_micro"][-1] += (TP + TN) / (TP+FP+FN+TN)
+                summary["name"].append(self.name)
+                summary["level"].append(level)
+                summary["origin"].append(o)
                 
-            summary["recall_macro"].append(conf["TP"]/(conf["TP"]+conf["FN"]))
-            summary["precision_macro"].append(conf["TP"]/(conf["TP"]+conf["FP"]))
-            summary["specificity_macro"].append(conf["TN"]/(conf["FP"]+conf["TN"]))
-            summary["accuracy_macro"].append((conf["TP"]+conf["TN"])/(conf["TP"]+conf["TN"]+conf["FP"]+conf["FN"]))
-            summary["recall_micro"][-1] /= len(classes)
-            summary["precision_micro"][-1] /= len(classes)
-            summary["specificity_micro"][-1]/= len(classes)
-            summary["accuracy_micro"][-1] /= len(classes)
-            
+                cwp,cwr =  self.clustering_wise_pr(QRPA[2], QRPA[1], self.B, K)
+                summary["clustering_wise_precision"].append(cwp)
+                summary["clustering_wise_recall"].append(cwr)
+
+                
+
+                classes = filtered_aff.loc[:,"reference_{}".format(level)].drop_duplicates().dropna().values
+
+                summary["classes"].append(len(classes))
+                summary["contigs"].append(len(self.contigs))
 
 
+                summary["recall_micro"].append(0)
+                summary["precision_micro"].append(0)
+                summary["specificity_micro"].append(0)
+                summary["accuracy_micro"].append(0)
 
-        self.summary = pandas.DataFrame(summary)
-        logging.debug(self.summary)
+                conf = {"TP":0,"TN":0,"FP":0,"FN":0}
+                aff = filtered_aff.dropna(subset=["reference_{0}".format(level)])
+                summary["affiliated_contigs"].append(len(filtered_aff))
+                summary["reference_contigs"].append(len(aff)) 
+                for cat in classes :
+                    TP = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}=='{1}'".format(level,cat))))
+                    TN = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}!='{1}'".format(level,cat))))
+                    FP = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}=='{1}'".format(level,cat))))
+                    FN = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}!='{1}'".format(level,cat))))
+                    conf["TP"] += TP
+                    conf["TN"] += TN
+                    conf["FP"] += FP
+                    conf["FN"] += FN
+                    if TP:
+                        summary["recall_micro"][-1] += TP / (TP+FN)
+                        summary["precision_micro"][-1] += TP / (TP+FP)
+                    if TN:
+                        summary["specificity_micro"][-1]+= TN / (FP + TN)
+                    summary["accuracy_micro"][-1] += (TP + TN) / (TP+FP+FN+TN)
+
+                summary["recall_macro"].append(conf["TP"]/(conf["TP"]+conf["FN"]))
+                summary["precision_macro"].append(conf["TP"]/(conf["TP"]+conf["FP"]))
+                summary["specificity_macro"].append(conf["TN"]/(conf["FP"]+conf["TN"]))
+                summary["accuracy_macro"].append((conf["TP"]+conf["TN"])/(conf["TP"]+conf["TN"]+conf["FP"]+conf["FN"]))
+                summary["recall_micro"][-1] /= len(classes)
+                summary["precision_micro"][-1] /= len(classes)
+                summary["specificity_micro"][-1]/= len(classes)
+                summary["accuracy_micro"][-1] /= len(classes)
+
+        return pandas.DataFrame(summary)

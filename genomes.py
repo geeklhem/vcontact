@@ -21,7 +21,7 @@ class Genomes(object):
             self.data = self.load_refseq()
         if tara and not refseq:
             self.data = self.load_tara()
-        if refseq and tara:
+        if refseq and tara and not refseq_contigs:
             self.data = pandas.HDFStore(options.cache_folder+"all_contigs.h5")
             if not "contigs" in self.data: 
                 refseq = self.load_refseq()
@@ -29,14 +29,15 @@ class Genomes(object):
                 self.data.append('contigs',pandas.concat((tara.contigs,refseq.contigs)),format='table', data_columns=True)
                 self.data.append('proteins',pandas.concat((tara.proteins,refseq.proteins)),format='table', data_columns=True)
                 self.data.append('metadata',tara.metadata,format='table')
-        if refseq and refseq_contigs:
+        if refseq and refseq_contigs and not tara:
             self.data = pandas.HDFStore(options.cache_folder+"all_refseq_contigs.h5")
             if not "contigs" in self.data: 
                 refseq = self.load_refseq()
                 contigs = self.load_contigs_refseq()
                 self.data.append('contigs',pandas.concat((contigs.contigs,refseq.contigs)),format='table', data_columns=True)
                 self.data.append('proteins',pandas.concat((contigs.proteins,refseq.proteins)),format='table', data_columns=True)
-                
+        else:
+            logging.info("Nothing loaded")
         
     def load_tara(self,h5_name = "tara.h5",fi_faa=None,fi_fna=None,fi_meta=None):
         """
