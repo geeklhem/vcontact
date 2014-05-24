@@ -10,7 +10,11 @@ import pandas.util.testing as ptest
 F = {} # fixtures
 def teardown():
     os.remove("mcl_results")
-    
+    try:
+        os.remove("gc_contigsclusters_network.ntw")
+        os.remove("gc_contigsclusters_network.info")
+    except OSError:
+        print "File not found"
 def setup():
     F["network_hypergeom"] = sparse.lil_matrix(np.matrix([[0,0,1,1,0,0],
                                                           [0,0,0,0,0,1],
@@ -18,7 +22,14 @@ def setup():
                                                           [1,0,1,0,0,0],
                                                           [0,0,0,0,0,0], 
                                                           [0,1,0,0,0,0]]))
+    F["network_hypergeom_interlink"] = sparse.lil_matrix(np.matrix([[0,1,1,1,0,0],
+                                                                    [1,0,0,0,0,1],
+                                                                    [1,0,0,1,0,0],
+                                                                    [1,0,1,0,0,0],
+                                                                    [0,0,0,0,0,0], 
+                                                                    [0,1,0,0,0,0]]))
 
+    
     F["B"] = np.matrix([[1,0],
                         [0,1],
                         [1,0],
@@ -108,6 +119,8 @@ def setup():
     F["aff"] = pandas.DataFrame({"reference_family": ["a","b","a","a","b"],
                                  "reference_genus": ["a","b",None,"a","c"],
                                  "membership":[1,1,1,1,1],
+                                 "origin":["test"]*5,
+                                 "cluster_max_membership":[0,1,0,0,1],
                                  "name": ["c_0","c_1","c_2","c_3","c_5"],
                                  "predicted_family":["a","b","a","a","b",],
                                  "predicted_genus":["a","b","a","a","b",]})
@@ -136,7 +149,8 @@ def setup():
                                      "recall_macro":[1,3/4.],
                                      "precision_macro":[1,3/4.],
                                      "specificity_macro":[1,7/8.],
-                                     "accuracy_macro":[1,10/12.0]
+                                     "accuracy_macro":[1,10/12.0],
+                                     "origin":["origin!='refseq_jan14'"]*2,
                                  })
     
 
@@ -213,5 +227,19 @@ def test_routine():
                              F["summary"].sort(axis=1).set_index("level").sort(),
                              check_dtype=False)
     
+
+
+def test_link():
+    L =  F["gc"].link_clusters(network=F["network_hypergeom_interlink"])
+    print L 
+
+def test_cluster_cyto():
+    F["gc"].cluster_network_cytoscape(network=F["network_hypergeom_interlink"])
+
+    with open("gc_contigsclusters_network.ntw",'r') as f:
+        print "\n".join([l for l in f])
+    with open("gc_contigsclusters_network.info",'r') as f:
+        print "\n".join([l for l in f])
+
 
 

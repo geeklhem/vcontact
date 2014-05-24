@@ -1,1 +1,7 @@
 *.pyc
+/#main.py#
+/#test.org#
+/.#main.py
+/.#test.org
+/.#modules.py
+/cache.py

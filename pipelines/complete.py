@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
 
             faa_basename = "_".join(os.path.basename(fi).split(".")[:-1])
-            name = "_".join(os.path.basename(fi).split(".")[:-1])+"_and_refseq"
+            name = "_".join(os.path.basename(fi).split(".")[:-1])+"_and_refseq" if fi != "refseq_alone" else "refseq_alone"
             
             logger.info("{:.^80}".format("file : {} ".format(fi)))
 

@@ -1,172 +1,317 @@
+""" Object containing th pc-profiles of the contigs and able to
+    compute the similarity network on the contigs and the pcs. """
+import logging
+import sys
 import pandas
 import numpy as np
 import scipy.stats as stats
 import scipy.sparse as sparse
-from itertools import combinations
-import logging
-import sys 
-logging.basicConfig(level=logging.DEBUG)
+import networkx
+logger = logging.getLogger(__name__)
 
 
 class PCMatrix(object):
     """
-    Protein Cluster presence/absence matrix, 
-    - Built from a protein cluster object.
-    - Usefull in network building, arff file creation.
+    Protein Cluster presence/absence matrix, or PCprofiles.
+       - Built from a protein cluster object.
+       - Usefull in network building.
     """
-    
-    def __init__(self,cluster_proteins,clusters,ref_proteins,contigs):
-        """
-        INPUT:
-        cluster_proteins = pandas dataframe with :
-              index : protein_id, cluster 
-        
-        clusters = pandas dataframe with:
-              index : name, size
 
+    def __init__(self,cluster_proteins, clusters, ref_proteins, contigs, contig_names = None):
+        """
+        Args:
+            cluster_proteins: pandas dataframe with :
+                protein_id: (index)
+                cluster:
+            clusters: pandas dataframe with:
+                name: (index)
+                size:
+            ref_proteins: = pandas dataframe with:
+                protein_id: (index)
+                contig:
+                function:
+            contigs: pandas dataframe with:
+                name: (index)
+                family:
+                genus: 
+                origin:
+
+            contig_names: (iterable) names of contigs to keep in the profiles.
+                (if none all contigs from contigs are used)
+        """
+
+        self.name = "PCmatrix"
+        
+        self.features = clusters
+        self.features.index.name = "name"
+        self.features.reset_index(inplace=True,drop=False)
+        logger.debug(self.features.head())
+        
+        # Filtering the contigs 
+        self.contigs = self.filtering(contigs, contig_names)
+        logger.debug(self.contigs.head())
+
+        # Building the PC-profiles
+        self.matrix,self.singletons = self.load_profiles(ref_proteins, cluster_proteins)
+
+        # Build the contig network.
+        self.ntw = self.network(self.matrix,self.singletons)
+
+        # Next step is probably to
+        # Export a network to mcl : self.to_mcl(self.ntw)
+        # Build the pc-network : self.pc_ntw = self.network_modules(self.matrix)
+
+
+    def __repr__(self):
+        return ("PC-profiles object {2}"
+                "{0[0]} contigs by {0[1]} shared protein clusters."
+                "and {1} singletons.").format(self.matrix.shape,
+                                              self.singletons.sum(),
+                                              self.name)
+
+
+    def filtering(self,contigs, contig_names):
+        """
+        Filering the contigs 
+        input :
+        - contigs = pandas dataframe with:
+              index : name, family, genus, origin        
+        - contig_names = iterable : names of contigs to keep
+          (if none all contigs from contigs are used)
+        output 
+        - contigs = filtered pandas dataframe 
+        """
+        # STEP 0 : Set index name.
+        contigs.index.name = "name"
+        contigs.reset_index(inplace=True,drop=False)
+
+        # STEP 1 : filtering the contigs
+        try:
+            i = len(contigs)
+            contigs = contigs.query("name in contig_names")
+            logger.info("Filtered {} contigs".format(i-len(contigs)))
+        except Exception as e:
+            logger.debug("No filtering done (contig_name).")
+
+        # Set the position of each contig in the matrix once and for all.
+        contigs["pos"] = contigs.reset_index().index
+
+        return contigs
+
+
+    def load_profiles(self,ref_proteins,cluster_proteins):
+        """
+        Load a Protein cluster presence/absence matrix.
+
+        INPUT:
         ref_proteins = pandas dataframe with:
               index : protein_id, contig, function
-        
-        contigs = pandas dataframe with:
-              index : name, family, genus, origin 
+
+        cluster_proteins = pandas dataframe with :
+              index : protein_id, cluster
+
+        OUTPUT:
+        - matrix (scipy.sparse.csr_matrix) contigs x protein_clusters.
+          M(c,p) = Bool("Contig c has the PC p")
         """
-        contigs.index.name = "name"
-        self.contigs = contigs.reset_index()
-        self.contigs["pos"] = self.contigs.index
+        # A tale in three dataframe merging...
 
-        clusters.index.name = "name"
-        self.features = clusters.reset_index() 
-        self.features["pos"] = self.features.index
+        ### 0 ### Associate each protein to its contig (position).
+        # We perform an inner join to discard the proteins not belonging
+        # our list of filtered contigs. 
+        pc = pandas.merge(self.contigs, ref_proteins.reset_index(),
+                          left_on="name", right_on="contig",
+                          how="inner").loc[:,["pos","protein_id"]]
+        pc.columns = ["pos_contig","protein_id"]
+        #########
+        #logger.debug(pc.head())
 
-        #logging.debug("Contigs:\n {0}".format(self.contigs.head()))
-        #logging.debug("Features:\n {0}".format(self.features.head()))
-        #logging.debug("Proteins_clusters:\n {0}".format(cluster_proteins.head()))
-        #logging.debug("Proteins_ref:\n {0}".format(ref_proteins.head()))
+        ### 1 ### Associate each protein to its cluster (if any)
+        # We join on the left so we keep all proteins. The ones without clusters have a NaN.
+        pc = pandas.merge(pc,cluster_proteins.reset_index(),
+                          left_on="protein_id",right_on="protein_id",
+                          how="left").loc[:,["pos_contig", "cluster"]]
+        ######### pc.columns are pos_contig (int), cluster (str)
+        #logger.debug(pc.head())
 
-        self.matrix = self.load(ref_proteins,cluster_proteins)
-        self.ntw = self.network(self.matrix)
-
-    def load(self,ref_proteins,cluster_proteins):
-        """Load a Protein cluster presence/absence matrix from a
-        ProteinClusters object.
-        INPUT :
-        - df (pandas.Dataframe) with columns Genome and Cluster
-        OUTPUT : 
-        - matrix (sparse.matrix)
-        - features (list)
-        - contigs (pandas.Dataframe)
-        """
-        pc = ref_proteins.join(cluster_proteins,how="right")
-        #logging.debug("Merge 0 :\n {0}".format(pc.head()))
+        i = len(pc)
+        singletons = pc.loc[pandas.isnull(pc.cluster)].groupby("pos_contig").pos_contig.count()
+        pc.dropna(subset=["cluster"],inplace=True)
+        #logger.debug("Droped {} singletons \n Prots :\n {} Singletons : \n {}".format(i-len(pc),pc.head(),singletons.head()))
         
-        pc = pandas.merge(pc , self.features,
-                          left_on="cluster",right_on="name").loc[:,["contig","pos"]].drop_duplicates()
-    
-        #logging.debug("Merge 1 :\n {0}".format(pc.head()))
-        pc = pandas.merge(pc, self.contigs,
-                          left_on="contig", right_on="name",
-                          suffixes=["_cluster","_contig"] ).loc[:,["pos_contig","pos_cluster"]]
+        # Filter the protein cluster are not represented
+        present_clusters = pc.cluster.dropna().drop_duplicates() 
+        self.features = self.features.query("name in present_clusters")
 
-        #logging.debug("Merge 2 :\n {0}".format(pc.head()))
+        # Set the position of each feature in the matrix once and for all.
+        self.features["pos"] = self.features.reset_index().index
 
-        matrix = sparse.coo_matrix(([1]*len(pc),(zip(*pc.values))),dtype="bool")
+        ### 2 ### Associate the clustrs to their position in the matrix.
+        # Drop the duplicates as a contig need only to have one protein of the cluster.
+        pc = pandas.merge(pc, self.features,
+                          left_on="cluster", right_on="name",
+                          how="left").loc[:,["pos_contig","pos"]].drop_duplicates()
+        ######## pc.columns are pos_contig (int), pos (int, pos cluster)
+        #logger.debug(pc.head())
+        
+        # Build the PC-profile matrix by putting ones in the coordinates given by pc
+        matrix      = sparse.coo_matrix(([1]*len(pc),(zip(*pc.values))),dtype="bool")
+        singletons = sparse.coo_matrix((singletons.values, (singletons.index.values,[0]*len(singletons)) ))
         matrix = sparse.csr_matrix(matrix)
-        logging.debug("P/A Matrix {0[0]} contigs by {0[1]} protein clusters.".format(matrix.shape))
-        return matrix 
 
-    def network(self,matrix,thres=1):
+        logger.info(("PC-profiles matrix {0[0]} contigs by {0[1]} shared protein clusters "
+                      "and {1} singletons.").format(matrix.shape, singletons.sum()))
+        return matrix,singletons
+
+    def network(self,matrix,singletons,thres=1):
+        """
+        Compute the hypergeometric-similarity contig network.
+        INPUT:
+        - matrix (scipy.sparse) : contigs x protein clusters :
+          M(c,p) == True <-> PC p is in Contig c.
+        - thres (float) : Minimal significativity to store an edge value.
+        OUTPUT:
+        - S (scipy.sparse lil matrix, symmetric) : contigs x contigs.
+          S(c,c) = sig(link)
+        """
+
+        # There are 
         contigs, pcs = matrix.shape
+        pcs += singletons.sum()
+        
+        # Number of comparisons
         T = 0.5 * contigs * (contigs -1 )
-        
-        # Number of protein clusters in each contig 
-        number_of_pc = matrix.sum(1)
-        
-        # Number of common protein clusters between two contigs 
-        commons_pc = matrix.dot(sparse.csr_matrix(matrix.transpose(),dtype=int))
-        
+        logT = np.log10(T)
 
-        
+        # Number of protein clusters in each contig
+        # = # shared pcs + #singletons
+        number_of_pc = matrix.sum(1) + singletons
+
+        # Number of common protein clusters between two contigs
+        commons_pc = matrix.dot(sparse.csr_matrix(matrix.transpose(),dtype=int))
+
         S = sparse.lil_matrix((contigs,contigs))
+
+        # Display
         i = 0
         total_c = float(commons_pc.getnnz())
-        for A,B in zip(*commons_pc.nonzero()) : # combinations(range(contigs),2):
+
+        for A,B in zip(*commons_pc.nonzero()) : #For A & B sharing contigs
             if A != B:
                 # choose(a, k) * choose(C - a, b - k) / choose(C, b)
-                # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k) 
-                pval = stats.hypergeom.sf(commons_pc[A,B],pcs, number_of_pc[A], number_of_pc[B]) 
-                sig = np.nan_to_num(-np.log10(pval*T))
+                # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k)
+                # sf(k-1)= P(x>k-1) = P(x>=k)
+                # It is symmetric but I put the smallest before to avoid numerical bias.
+                a,b = sorted([number_of_pc[A], number_of_pc[B]])
+                pval = stats.hypergeom.sf(commons_pc[A,B]-1,pcs,a, b)
+                sig = np.nan_to_num(-np.log10(pval)-logT)
 
                 if sig>thres:
                     S[min(A,B),max(A,B)] = sig
+
+                # Display
                 i += 1
                 if i%1000 == 0:
                     sys.stdout.write(".")
-                if i%10000 == 0:  
+                if i%10000 == 0:
                     sys.stdout.write("{:6.2%} {}/{}\n".format(i/total_c,i,total_c))
-                    
-        logging.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz()))
-        S += S.T
+
+        logger.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz()))
+        S += S.T # Symmetry
+
         return S
 
-    def to_arff(self,weka_file,class_value,matrix=None,feature_list=None,target=None):
-        """ Convert a scipy sparse matrix (matrix) and a list of classess, to an arff weka file """
-        pass
+
+
+    def network_modules(self,matrix=None,thres=1):
         """
-        matrix = self.matrix if matrix == None else matrix
-        feature_list = self.features if feature_list == None else feature_list
-        target = self.target if target ==None else target 
-        
-        if matrix.shape == (1,1):
-            logging.warning("File {0} not wrote. (Empty matrix).".format(weka_file))
-            return 1
+        Compute the hypergeometric-similarity pc network.
 
-        if os.path.isfile(weka_file) and self.force:
-            logging.info("File {0} not wrote. (File existing).".format(weka_file))
-            return 0
+        /!\ Use only the PCs that are present in 3 contigs or more.
 
-
-        possible_classes = frozenset(class_value.values())
-        relation_name = os.path.basename(weka_file).split(".")[0]
-        logging.info("Relation name : {0} (file : {1})".format(relation_name,weka_file))
-
-        if not sparse.isspmatrix_csr(matrix):
-            matrix = sparse.csr_matrix(matrix)
-        matrix.sort_indices()
-
-        with open(weka_file,"wb") as f:
-            f.write("@relation proteinclusters_{0}\n".format(relation_name))    
-            for feature in feature_list:
-                f.write("@attribute {0} numeric\n".format(feature))
-            f.write('@attribute class {{"{0}"}}\n'.format('","'.join(possible_classes)))
-
-            f.write("@data\n")
-            for row_num in range(matrix.shape[0]):
-                if target[row_num] in class_value :
-                    cl = '"{0}"'.format(class_value[target[row_num]]) if target[row_num] in class_value else "?"
-                    clusters = ["{0} {1}".format(c[0],c[1]) for c in zip(matrix[row_num,:].indices,matrix[row_num,:].data)]
-                    f.write('{{{0}, {1} {2}}}\n'.format(", ".join(clusters),matrix.shape[1],cl))"""
-
-
-    def to_mcl(self,matrix,fi):
-        """Save a network in a file ready for MCL
         INPUT:
-        - matrix (scipy.sparse matrix) network
-        - fi (str) filename 
+        - matrix (scipy.sparse) : contigs x protein clusters :
+          M(c,p) == True <-> PC p is in Contig c.
+        - thres (float) : Minimal significativity to store an edge value.
+        OUTPUT:
+        - S (scipy.sparse lil matrix, symmetric) : PCs x PCs
+          S(c,c) = sig(link)
         """
-               
+
+        matrix = self.matrix if matrix == None else matrix
+        contigs = matrix.shape[0]
+
+        # Number of contig in which a given PC is found
+        number_of_contigs = np.squeeze(np.asarray(np.transpose(matrix.sum(0))))
+
+        # We only keep the pcs that are presents in more than 2 contigs
+        pos_pcs_in_modules = [i for i,x in enumerate(number_of_contigs) if x>2]
+        pcs_in_modules = len(pos_pcs_in_modules)
+        logger.info("{} pc present in strictly more than 2 contigs".format(pcs_in_modules))
+
+        # Filtering the matrix
+        matrix = matrix[:,pos_pcs_in_modules]
+
+        # Number of comparisons
+        T = 0.5 * pcs_in_modules * (pcs_in_modules -1 )
+        logT = np.log10(T)
+
+        # Number of common contigs between two pcs
+        commons_contigs = sparse.csr_matrix(matrix,dtype=int).transpose().dot(matrix)
+
+        S = sparse.lil_matrix((pcs_in_modules,pcs_in_modules))
+        i = 0
+        total_c = float(commons_contigs.getnnz())
+        for A,B in zip(*commons_contigs.nonzero()) :
+            if A != B:
+                # choose(a, k) * choose(C - a, b - k) / choose(C, b)
+                # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k)
+                # sf(k-1)= P(x>k-1) = P(x>=k)
+                # It is symmetric but I put the smallest before to avoid numerical biais.
+
+                a,b = sorted([number_of_contigs[A], number_of_contigs[B]])
+                pval = stats.hypergeom.sf(commons_contigs[A,B]-1,contigs,a, b)
+                sig = np.nan_to_num(-np.log10(pval)-logT)
+
+
+                if sig>thres:
+                    S[min(A,B),max(A,B)] = sig
+
+                i += 1
+                if i%1000 == 0:
+                    sys.stdout.write(".")
+                if i%10000 == 0:
+                    sys.stdout.write("{:6.2%} {}/{}\n".format(i/total_c,i,total_c))
+
+        logger.debug("Hypergeometric similarity network : {0} pcs, {1} edges".format(pcs_in_modules,S.getnnz()))
+        S += S.T # Symmetry
+
+        return S
+
+    def to_mcl(self,matrix,fi,names=None):
+        """Save a network in a file ready for MCL
+        Args:
+            matrix: (scipy.sparse matrix) network.
+            fi: (str) filename .
+            names: (pandas.dataframe):
+                "pos":  (int) is the position in the matrix.
+                "name": (str) column contain the name of the node.
+                If None, self.contigs is used.
+
+        Returns:
+            fi: (str) filename
+        """
+        names = self.contigs if names == None else names
+        names = names.set_index("pos").name
         with open(fi,"wb") as f:
             matrix = sparse.dok_matrix(matrix)
             for r,c in zip(*matrix.nonzero()):
-                f.write(" ".join([str(x) for x in (self.contigs.ix[r,"name"],
-                                                   self.contigs.ix[c,"name"],
+                f.write(" ".join([str(x) for x in (names[r],
+                                                   names[c],
                                                    matrix[r,c])]))
                 f.write("\n")
 
-        logging.debug("Saving network in file {0} ({1} lines).".format(fi,matrix.getnnz()))
+        logger.debug("Saving network in file {0} ({1} lines).".format(fi,matrix.getnnz()))
+
         return fi
 
-
-    def to_cytoscape():
-        """
-        """
-        pass 

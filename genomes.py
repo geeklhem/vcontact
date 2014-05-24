@@ -112,7 +112,8 @@ class Genomes(object):
 
             genome = {"name":[],
                       "family":[],
-                      "genus":[],}
+                      "genus":[],
+                      "size":[],}
 
             proteins = {"protein_id":[],
                         "contig":[],
@@ -124,7 +125,8 @@ class Genomes(object):
                 name = r.id.split(".")[0]
                 genome["name"].append(name)
 
-                # Taxonomy 
+                # Taxonomy
+                genome["size"].append(len(r.seq))
                 genome["family"].append(None)
                 genome["genus"].append(None)
                 for t in r.annotations["taxonomy"]:
