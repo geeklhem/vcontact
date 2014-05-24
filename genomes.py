@@ -53,6 +53,22 @@ class Genomes(object):
             meta["Station"] = ["".join(k.split("_")) for k in meta["Station"]]
             meta = meta.set_index("Station")
             store.append('metadata',meta,format='table')
+
+            
+        if not "proteins" in store:
+            fi_faa = os.path.expanduser(options.data_folder+"tara/tara_c10_prots.txt") if fi_faa == None else os.path.expanduser(fi_faa)
+            proteins = {"protein_id":[],
+                        "contig":[]}
+
+            with open(fi_faa,"rb") as faa:
+                for l in faa:
+
+                    proteins["protein_id"].append(l.split("#")[0].rstrip()[1:])
+                    proteins["contig"].append("_".join(l.split("_")[:2])[1:])
+                
+            proteins = pandas.DataFrame(proteins).set_index("protein_id")
+            proteins["function"] = None
+            store.append('proteins',proteins,format='table',data_columns=True)
             
         # Contigs
         if not "contigs" in store:
@@ -68,23 +84,20 @@ class Genomes(object):
             contigs = pandas.DataFrame(contigs).set_index("name")
             contigs["family"] = None
             contigs["genus"] = None
+            rec = SeqIO.parse(options.data_folder+"tara/tara_c10.fna","fasta")
+
+            # Add the size of the contigs
+            size_contigs = pandas.DataFrame([(r.id,len(r.seq)) for r in rec],
+                                            columns=["name","size"])
+            contigs = pandas.merge(contigs,size_contigs,
+                                   how="left")
+
+            # Add the number of proteins by contig
+            pbc =  pandas.DataFrame(proteins.groupby("contig").contig.count(), columns=["proteins"])
+            contigs = pandas.merge(contigs,pbc,how="left",left_index=True,right_index=True)
 
             store.append('contigs',contigs,format='table',data_columns=True)
 
-        if not "proteins" in store:
-            fi_faa = os.path.expanduser(options.data_folder+"tara/tara_c10_prots.txt") if fi_faa == None else os.path.expanduser(fi_faa)
-            proteins = {"protein_id":[],
-                        "contig":[]}
-
-            with open(fi_faa,"rb") as faa:
-                for l in faa:
-
-                    proteins["protein_id"].append(l.split("#")[0].rstrip()[1:])
-                    proteins["contig"].append("_".join(l.split("_")[:2])[1:])
-                
-            proteins = pandas.DataFrame(proteins).set_index("protein_id")
-            proteins["function"] = None
-            store.append('proteins',proteins,format='table',data_columns=True)
         return store
             
     def load_refseq(self,fi=None,fi_taxa = None,contig_id_eq_prot_id=True,h5_name="refseq.h5"):
@@ -146,6 +159,11 @@ class Genomes(object):
             genome = pandas.DataFrame(genome).set_index("name")
             genome["origin"] = "refseq_jan14"
             proteins = pandas.DataFrame(proteins).set_index("protein_id")
+
+            pbc = pandas.DataFrame(proteins.groupby("contig").contig.count(), columns=["proteins"])
+            genome = pandas.merge(genome,pbc,how="left",left_index=True,right_index=True)
+
+
             store.append('contigs',genome,format='table',data_columns=True)
             store.append('proteins',proteins,format='table',data_columns=True)
 
@@ -237,3 +255,5 @@ if __name__ == "__name__":
         print("Caching genomes with options {}".format(opt))
         g = Genomes(*opt)
         del g
+
+
