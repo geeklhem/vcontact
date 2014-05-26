@@ -88,7 +88,7 @@ g = genomes.Genomes(refseq=True,tara=args.tara,refseq_contigs=args.refcont)
 def call(cmd,fi,overwrite=None):
     overwrite = options.overwrite if overwrite == None else overwrite
     if overwrite or not os.path.isfile(fi):
-        logger.info("Executing {} to create file {}.".format(cmd.split(" ")[0],os.path.basename(fi)))
+        logger.info("Executing {} to create file {}.".format(cmd.split(" ")[0],os.path.ename(fi)))
         try:
             subprocess.check_call(cmd, shell=True) #Security issue : vulnerable to shell injections...
         except subprocess.CalledProcessError as e:

@@ -6,6 +6,8 @@ import options
 import numpy as np
 import re
 
+logger = logging.getLogger(__name__)
+
 class Genomes(object):
     """
     Data about reference genomes, object built from the refseq gbff file.
@@ -13,15 +15,17 @@ class Genomes(object):
     
     def __init__(self, refseq=True,tara=False,refseq_contigs=False):
         """
-        
-        Arguments:
-        - `fi`:
+        Initialise the object with the required data.
+
+        Args:
+            refseq (bool) : Load the refseq sequences stored in 
+                options.files["refseq"]["fasta"] and options.files["refseq"]["fasta"]  
         """
         if refseq and not tara:
             self.data = self.load_refseq()
-        if tara and not refseq:
+        elif tara and not refseq:
             self.data = self.load_tara()
-        if refseq and tara and not refseq_contigs:
+        elif refseq and tara and not refseq_contigs:
             self.data = pandas.HDFStore(options.cache_folder+"all_contigs.h5")
             if not "contigs" in self.data: 
                 refseq = self.load_refseq()
@@ -36,8 +40,7 @@ class Genomes(object):
                 contigs = self.load_contigs_refseq()
                 self.data.append('contigs',pandas.concat((contigs.contigs,refseq.contigs)),format='table', data_columns=True)
                 self.data.append('proteins',pandas.concat((contigs.proteins,refseq.proteins)),format='table', data_columns=True)
-        else:
-            logging.info("Nothing loaded")
+       
         
     def load_tara(self,h5_name = "tara.h5",fi_faa=None,fi_fna=None,fi_meta=None):
         """
@@ -90,24 +93,29 @@ class Genomes(object):
             size_contigs = pandas.DataFrame([(r.id,len(r.seq)) for r in rec],
                                             columns=["name","size"])
             contigs = pandas.merge(contigs,size_contigs,
+                                   left_index=True,right_on="name",
                                    how="left")
 
             # Add the number of proteins by contig
             pbc =  pandas.DataFrame(proteins.groupby("contig").contig.count(), columns=["proteins"])
-            contigs = pandas.merge(contigs,pbc,how="left",left_index=True,right_index=True)
+
+            contigs.set_index("name",inplace=True)
+            contigs = pandas.merge(contigs, pbc, how="left", left_index=True, right_index=True)
 
             store.append('contigs',contigs,format='table',data_columns=True)
 
         return store
             
     def load_refseq(self,fi=None,fi_taxa = None,contig_id_eq_prot_id=True,h5_name="refseq.h5"):
-        """
-        INPUT :
-        - fi (str), a genebak file.
-        OUTPUT : 
-        - names (list) The genomes names (Index2genome)
-        - taxonomy (dict of list) map genome name on the list of taxonomic levels
-        - prot2genome (dict) map protein name to genome name
+        """Load the refseq genomes 
+
+        Args:
+            fi (str): a genebak file.
+            fi_taxt (str): a pickled pandas dataframe with the taxonomy information.
+            h5_name (str): path to the cache file to save. 
+        
+        Returns:
+            pandas.HDF5Store: With contigs and proteins dataframe.
         """
 
         # Loading taxonomic classes 
@@ -170,7 +178,7 @@ class Genomes(object):
             nf = len(genome) - genome.family.count() 
             ng = len(genome) - genome.genus.count()
             if nf!=0 or ng!=0 :
-                logging.warning("{0} genomes without family and {1} genomes without genus.".format(nf,ng))
+                logger.warning("{0} genomes without family and {1} genomes without genus.".format(nf,ng))
 
         return store 
 
@@ -179,14 +187,16 @@ class Genomes(object):
     
     def load_contigs_refseq(self,fi=None,fi_taxa=None,h5_name="refseq_contigs.h5"):
         """
-        INPUT :
-        - fi (str), a genebak file.
-        OUTPUT : 
-        - names (list) The genomes names (Index2genome)
-        - taxonomy (dict of list) map genome name on the list of taxonomic levels
-        - prot2genome (dict) map protein name to genome name
+        Load contigs from refseq
+        Args:
+            fi (str): a genebak file.
+            fi_taxt (str): a pickled pandas dataframe with the taxonomy information.
+            h5_name (str): path to the cache file to save. 
+        
+        Returns:
+            pandas.HDF5Store: With contigs and proteins dataframe.
         """
-        logging.warning("Loading Refseq contigs")
+        logger.warning("Loading Refseq contigs")
         # Loading taxonomic classes 
         fi = os.path.expanduser(options.data_folder+"contigs_refseq/proteins_names") if not fi else fi 
         fi_taxa = os.path.expanduser(options.data_folder+"ncbi_taxdump/refseqphage_taxa.pkl") if not fi_taxa else fi_taxa  
@@ -216,7 +226,7 @@ class Genomes(object):
                     genome_name = "_".join(splited[:2])
 
                     if len(splited) != 4:
-                        logging.error("line: {}\n pid: {}\n contig {} \n genome {}".format(r,prot_name,contig_name,genome_name))
+                        logger.error("line: {}\n pid: {}\n contig {} \n genome {}".format(r,prot_name,contig_name,genome_name))
                         
                     
                     genome["origin"].append("contigs_{}_refseq_jan14".format(r.split("-")[0]))
@@ -237,7 +247,7 @@ class Genomes(object):
             nf = len(genome) - genome.family.count() 
             ng = len(genome) - genome.genus.count()
             if nf!=0 or ng!=0 :
-                logging.warning("{0} contigs without family and {1} contigs without genus.".format(nf,ng))
+                logger.warning("{0} contigs without family and {1} contigs without genus.".format(nf,ng))
 
         return store 
 
@@ -250,7 +260,7 @@ def pid(prot):
     return pid  
 
 
-if __name__ == "__name__":
+if __name__ == "__main__":
     for opt in [(True,False,True)]:
         print("Caching genomes with options {}".format(opt))
         g = Genomes(*opt)

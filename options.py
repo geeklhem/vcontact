@@ -44,3 +44,9 @@ keywords =  ['ATPase', 'wedge', 'junction', 'assembly',  'activator',  'baseplat
 
 pelagiphages = ["NC_020481","NC_020482","NC_020483","NC_020484"]
 names = ["HTVC010P", "HTVC011P", "HTVC019P", "HTVC008M"]
+
+"""
+refseq_fi = {}
+files = {"refseq":refseq_fi, 
+         "tara":tara_fi}
+"""

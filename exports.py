@@ -134,3 +134,53 @@ def export_network(fi_ntw, network, dataframe,
                                 f.write("\n")
                                 line += 1
     print("Wrote {} lines in {}.".format(line,fi_ntw))
+
+
+
+def cluster_network_cytoscape(self,fi_ntw=None,fi_clust_info=None,network=None):
+        #TODO: REFACTOR THIS 
+
+        fi_ntw = self.name+"_contigsclusters_network.ntw"
+        fi_clust_info = self.name + "_contigsclusters_network.info"
+        info = self.clusters
+
+        
+        info = pandas.merge(info,self.taxonomy.query("level=='family'"),
+                            how="left",
+                            left_on="pos_family",right_on="pos",
+                            suffixes=["","__family"]
+                            )
+        #print info
+        info = pandas.merge(info,self.taxonomy.query("level=='genus'"),
+                            how="left",
+                            left_on="pos_genus",right_on="pos",
+                            suffixes=["","__genus"]
+                            )
+        info.reset_index(inplace=True)
+        info.set_index("name",inplace=True)
+        #print info
+        info = info.loc[:,["size","name__family","name__genus"]]
+        info.to_csv(fi_clust_info,sep="\t")
+       
+        network = self.network if network is None else network
+  
+
+        L = self.link_clusters(network=network)
+        
+        cluster_idx = self.clusters.reset_index()
+        cluster_idx.set_index("pos",inplace=True)
+        #print cluster_idx
+        with open(fi_ntw,"w") as f:
+            f.write("Cluster_1\t")
+            f.write("Cluster_2\t")
+            f.write("inter_ov_intra")
+            f.write("\n")
+            for r in range(L.shape[0]):
+                for c in range(r):
+                    if L[r,c]:
+                        n1 = cluster_idx.ix[r,"name"] if r != L.shape[0]-1 else "non-clustered" 
+                        n2 = cluster_idx.ix[c,"name"] if c != L.shape[0]-1 else "non-clustered"
+                        f.write("\t".join([str(n1),
+                                           str(n2),
+                                           str(L[r,c])]))
+                        f.write("\n")        

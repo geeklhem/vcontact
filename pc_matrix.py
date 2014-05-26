@@ -7,6 +7,7 @@ import numpy as np
 import scipy.stats as stats
 import scipy.sparse as sparse
 import networkx
+import cPickle as pickle
 logger = logging.getLogger(__name__)
 
 
@@ -288,30 +289,39 @@ class PCMatrix(object):
 
         return S
 
-    def to_mcl(self,matrix,fi,names=None):
-        """Save a network in a file ready for MCL
+    def nodes_properties(self, matrix):
+        """ Compute several node specific statistics.
+        
         Args:
-            matrix: (scipy.sparse matrix) network.
-            fi: (str) filename .
-            names: (pandas.dataframe):
-                "pos":  (int) is the position in the matrix.
-                "name": (str) column contain the name of the node.
-                If None, self.contigs is used.
-
-        Returns:
-            fi: (str) filename
+            matrix: (sparse.matrix) contig-similaritt network
+        
+        Side-effect:
+            self.contigs: Add the following columns:
+                degree: Number of edge to the node. 
+                clustering_coefficient: Proportion of existing edges
+                    over possible edges in the neighborhood of the node
+                betweeness_centrality: sum of the fraction of all-pairs 
+                    shortest path that pass trhough the node.
         """
-        names = self.contigs if names == None else names
-        names = names.set_index("pos").name
-        with open(fi,"wb") as f:
-            matrix = sparse.dok_matrix(matrix)
-            for r,c in zip(*matrix.nonzero()):
-                f.write(" ".join([str(x) for x in (names[r],
-                                                   names[c],
-                                                   matrix[r,c])]))
-                f.write("\n")
 
-        logger.debug("Saving network in file {0} ({1} lines).".format(fi,matrix.getnnz()))
+        D = networkx.from_scipy_sparse_matrix(matrix)
+        
+        bc = pandas.Series(networkx.betweenness_centrality(D), name="betweeness_centrality")
+        degr = pandas.Series(networkx.degree(D), name="degree")
+        clcoef = pandas.Series(networkx.clustering(D), name="clustering_coef")
+                
+        df = pandas.concat([bc,degr,clcoef],axis=1)
+        self.contigs = pandas.merge(self.contigs,df,left_on="pos",right_index=True)
 
-        return fi
+    def to_pickle(self,path=None):
+        """ Pickle (serialize) object to file path."""
+        path = self.name+".pkle" if path is None else path
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+def read_pickle(path):
+    """Read pickled object in file path."""
+    with open(path, 'rb') as fh:
+        return pickle.load(fh)
+
 

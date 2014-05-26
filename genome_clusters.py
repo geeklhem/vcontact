@@ -1,100 +1,184 @@
-""" Genome clusters : An object to work on the similarity network and make the affiliation"""
-import pc_matrix
+"""Genome clusters : An object to work on the similarity network and
+make the affiliations"""
+
+import os
+import subprocess
+import cPickle as pickle
+import logging
+
 import numpy as np
 import scipy.sparse as sparse
-import logging
 import pandas
-import cPickle as pickle
-import networkx
-import options 
-from Bio import SeqIO
+
+import pc_matrix
+import options
+import matrices
+import ml_functions
+import associations
+
 logger = logging.getLogger(__name__)
 
 class GenomeCluster(object):
-    """ Genome cluster object """ 
-    def __init__(self,pcm,mcl_file=None,name="gc"):
+    """ Deal with the clusters of the contig similarity network
+
+    Attributes:
+            features: (pandas df) Protein clusters
+            contigs: (pandas df) Contigs & Reference genomes
+            network: (sparse matrix) Contig similarity network
+            taxonomy: (pandas df) Taxonomic class
+            clusters: (pandas df) Contig clusters
+            mcl_results: (list of list) mcl_result[cluster][prot]
+    """
+    def __init__(self,pcm,inflation=2,threshold=None,name=None):
         """
+        Init the object with a pc-profile object and perform the clustering
 
         Args:
             pcm: PCMatrix object or a tuple
                  (features (df), contigs (df), network (sparse matrix)).
-            mcl_file: (str) mcl results file.
-            name: (str) A name to identify the object.
+            inflation (float): inflation for mcl.
+            threshold (float): minimal significativity. 
+            name (str): A name to identify the object.
         """
-        self.name = name
-        
+        self.name = "gc_mcl{}".format(inflation) if name is None else name
+        self.inflation = inflation
+        self.thres = threshold
+
         if isinstance(pcm,pc_matrix.PCMatrix):
-            self.features = pcm.features
-            self.contigs = pcm.contigs
+            self.features = pcm.features.copy
+            self.contigs = pcm.contigs.copy()
             self.network = pcm.ntw
         else:
-            self.features,self.contigs,self.network = pcm
+            self.features,self.contigs,self.network = pcm[0].copy(), pcm[1].copy(), pcm.network
 
+        if threshold is not None:
+            before = self.network.getnnz()
+            self.network = self.network.multiply(self.network>=self.thres)
+            logger.debug(("Filtered {} edges according to the sig. threshold"
+                           " {}.").format(before-self.network.getnnz(), self.thres))
+
+            
         self.taxonomy = self.extract_taxonomy(self.contigs)
-        
-        if mcl_file:
-            self.clusters,self.mcl_results = self.load_clusters(mcl_file)
+
+        self.clusters,self.mcl_results = self.clustering(options.data_folder+self.name,
+                                                         self.inflation)
+
+
+        self.matrix = {}
+        logger.info("Computing membership matrix...")
+        self.matrix["B"] = matrices.membership(self.mcl_results,
+                                          self.network,
+                                          self.contigs)
+        self.contigs = associations.contig_cluster(self.contigs,self.matrix["B"])
+
 
     def __repr__(self):
         return "GenomeCluster object {}, {} contigs and {} clusters".format(self.name,len(self.contigs),len(self.clusters))
 
-    def extract_taxonomy(self, contigs, levels=["family","genus"]):
+    #--------------------------------------------------------------------------#
+    # PART 1 : IMPORT, EXTRACTION, CLUSTERING
+    #--------------------------------------------------------------------------#
+    def extract_taxonomy(self, contigs, levels=("family","genus")):
         """ Build the taxonomy dataframe.
 
         Args:
-            contigs: (pandas.DataFrame) 
-            levels: (list) 
+            contigs (pandas.DataFrame): with colum "level" and "pos". 
+            levels (list): column name in contigs
 
         Returns:
-            taxonomy: (pandas.DataFrame) 
+            dict: A dictionary of pandas.DataFrame, one key by taxonomic level.
         """
-        tax = []
+        contigs = self.contigs if contigs is None else contigs
+        tax = {}
         for t in levels:
-            tax.append(pandas.DataFrame(contigs.loc[:,t]).drop_duplicates().dropna())
-            tax[-1].columns = ["name"]
-            tax[-1]["pos"] = range(len(tax[-1]))
-            tax[-1]["level"] = t
-        taxonomy = pandas.concat(tax)
-        return taxonomy
+            tax[t] = pandas.DataFrame(contigs.groupby(t).pos.count(),
+                                      columns=["references"])
+            tax[t].index.name = "name"
+            tax[t].reset_index(inplace=True)
+            tax[t]["pos"] = tax[t].index
+        return tax
 
-    def routine(self):
-        """Routine of the analysis"""
-        # Membership matrix
-        self.B  = self.membership_matrix(self.mcl_results)
 
-        # Taxonomic reference matrix
-        self.Kf = self.reference_membership_matrix("family")
-        self.Kg = self.reference_membership_matrix("genus")
+    def clustering(self,basename, I, force=False):
+        """Export the matrix, Run MCL and load the results
 
-        # recall, precision and accuracy matrix
-        self.QRPA_f = self.correspondence_matrix(self.Kf,self.B)
-        self.QRPA_g = self.correspondence_matrix(self.Kg,self.B)
+        Args:
+            basename: (str) Path for the exported files
+            I: (float) inflation for mcl
+            force: (bool) overwrite existing file
 
-        # Associate each cluster to a taxonomic class
-        self.associations(self.QRPA_f[2],self.QRPA_f[1],"family")
-        self.associations(self.QRPA_g[2],self.QRPA_g[1],"genus")
+        Returns:
+            See self.load_clusters.
 
-        # Associate each contig to its max mbship cluster
-        self.aff = self.affiliate(self.B)
+        Side-Effects:
+           Save basename.ntw the network file
+           Save basename.clusters the clustering results
+           self.contig: add "cluster" column
+        """
 
-        # Summary 
-        self.summary = self.compute_summary()
-        
-        logger.debug(self.summary)
+        fi_ntw = basename+".ntw"
+        fi_clusters = basename+".clusters"
+
+        # Export for MCL
+        logger.info("Exporting for MCL")
+        if not os.path.exists(fi_ntw) or force:
+            self.to_mcl(self.network,fi_ntw)
+        else:
+            logger.debug("Network file already exist.")
+
+        # MCL
+        logger.info("Clustering the pc similarity-network")
+        if not os.path.exists(fi_clusters or force):
+            subprocess.call(("mcl {0} -o {1} --abc "
+                             "-I {2}").format(fi_ntw,fi_clusters,I),
+                            shell=True)
+            logger.debug("MCL({}) results are saved in {}.".format(I,fi_clusters))
+        else:
+            logger.debug("MCL({}) file already exist.".format(I,fi_clusters))
+
+        # Load clusters
+        return self.load_clusters(fi_clusters)
+
+    def to_mcl(self,matrix,fi,names=None):
+        """Save a network in a file ready for MCL
+
+        Args:
+            matrix (scipy.sparse_matrix): network.
+            fi (str): filename .
+            names (pandas.dataframe): with the columns
+                "pos":  (int) is the position in the matrix.
+                "name": (str) column contain the name of the node.
+                If None, self.contigs is used.
+
+        Returns:
+            str: filename
+        """
+        names = self.contigs if names == None else names
+        names = names.set_index("pos").name
+        with open(fi,"wb") as f:
+            matrix = sparse.dok_matrix(matrix)
+            for r,c in zip(*matrix.nonzero()):
+                f.write(" ".join([str(x) for x in (names[r],
+                                                   names[c],
+                                                   matrix[r,c])]))
+                f.write("\n")
+
+        logger.debug("Saving network in file {0} ({1} lines).".format(fi,matrix.getnnz()))
+        return fi
 
     def load_clusters(self,fi):
         """ Load clusters from the mcl results
 
-        Args: 
-            fi: (str) MCL result file. 
-        
+        Args:
+            fi (str): path to the MCL result file.
+
         Returns:
-            df: (pandas.DataFrame) give for each contig cluster 
+            df (pandas.DataFrame): give for each contig cluster
                 its name, size and position in the matrix.
 
-        Side-Effect: 
-            Modify self.contig to add the column "mcl_cluster"
-            giving the pos of the cluster it belongs to. 
+        Side-Effect:
+            Modify self.contig to add the column "pos_cluster"
+            giving the pos of the cluster it belongs to.
 
         The file fi was probably generated using :
         "mcl <file>.ntw --abc -I 2 -o <file>.clusters".
@@ -102,477 +186,242 @@ class GenomeCluster(object):
 
         # Read the files
         with open(fi) as f:
-           c = [ line.rstrip("\n").split("\t") for line in f ]
+            c = [ line.rstrip("\n").split("\t") for line in f ]
+        c = [x for x in c if len(c)>1]
         name = ["cluster_{}".format(i) for i in range(len(c))]
         size = [len(i) for i in c]
         pos = range(len(c))
 
-        # Update self.contigs (To refactor) 
+        logger.info(("{} clusters loaded (singletons and non-connected nodes "
+                     "are dropped).").format(len(c)))
+
+        # Update self.contigs (To refactor)
         self.contigs.reset_index(inplace=True)
         self.contigs.set_index("name",inplace=True)
-        self.contigs["mcl_cluster"] = np.nan
+        self.contigs["pos_cluster"] = np.nan
 
         for i,cluster in enumerate(c):
             for n in cluster:
-                self.contigs.loc[n,"mcl_cluster"] = i
+                self.contigs.loc[n,"pos_cluster"] = i
         self.contigs.reset_index(inplace=True)
 
-        return pandas.DataFrame({"name":name, "size":size,"pos":pos}),c 
-        
-    def membership_matrix(self,mcl_results,network=None,contigs=None,features=None):
-        """Build the membership matrix.
-
-        Args:
-            mcl_results: (list of list) a list of contigs name by cluster. 
-                Extracted from the lines of the mcl output
-            network: (sparse matrix)
-        Returns:
-            B: (sparse matrix) Membership matrix #target X #clusters, 
-                B(g,c) is the proportion of edges weight linking the
-                node g to the cluster C
-        """
-
-        # Parameters default values
-        network = self.network   if network  is None else network
-        contigs = self.contigs   if contigs  is None else contigs
-        features = self.features if features is None else features
-
-        network = network.todense()
-        network = (network - network.min()) / (network.max() - network.min())
-
-        B_sum = np.hstack([network.sum(1)]*len(mcl_results)) #Sum of weights linking to a given target.
-
-        
-        # A list giving the columns of the i-th cluster members :
-        clusters = [np.int_(contigs.query("name in members").ix[:,"pos"].values) for members in mcl_results]
-        B_clust = np.hstack([network[:,cols].sum(1) for cols in clusters])
+        return pandas.DataFrame({"name":name, "size":size,"pos":pos}),c
 
 
-        B = B_clust/B_sum
-        B = np.nan_to_num(B)
-        return B
-
-    def link_clusters(self,mcl_results=None,network=None,contigs=None):
-        """Link the clusters 
-        
-        Args:
-            mcl_results: (list of list) a list of contigs name by cluster. 
-                Extracted from the lines of the mcl output
-            network: (sparse matrix)
-
-        Returns:
-            (sparse matrix) L matrix cluster*cluster, edges inter over edges intra. 
-        """
-
-        # Parameters default values
-        mcl_results = self.mcl_results if mcl_results is None else mcl_results
-        network = self.network if network is None else network
-        contigs = self.contigs if contigs is None else contigs
-
-        network = network.todense()
-      
-        network = (network - network.min()) / (network.max() - network.min())
-      
-        # A list giving the columns of the i-th cluster members :
-        pos_nan = len(self.clusters)
-
-        Z = sparse.coo_matrix(([1.0]*len(self.contigs),
-                               [self.contigs.pos,self.contigs.pos_cluster.fillna(pos_nan)])).todense()
-        
-
-
-        S = np.transpose(Z).dot(network.dot(Z))
-        
-
-        sii = np.vstack( [S.diagonal()] *S.shape[0] )
-        
-        L = (S + S.T) / (sii + sii.T)
-        
-        np.fill_diagonal(L,0)
-        L = np.nan_to_num(L)
-        return L
+    #--------------------------------------------------------------------------#
+    # PART 2: Affiliations
+    #--------------------------------------------------------------------------#
 
     
-    def reference_membership_matrix(self, level,
-                                    contigs=None, taxonomy=None,
-                                    reference_origin=["refseq_jan14","test"]):
-        """
-        Build K the (Genome X Taxonomic class) reference membership matrix. 
+    def total_affiliation(self,levels=("family","genus")):
+        """Routine of the analysis using all the dataset.
         
         Args:
-            level: (str) family or genus.
-            contigs: (dataframe) with columns:
-                pos: position in the matrix (int).
-                origin: used to select the contigs (str).
-                family and genus: reference taxonomy (str). 
-            taxonomy: (dataframe) with columns:
-                level: family or genus (str).
-                name: name of the class  (str).
-                pos: position in matrix (int).
-            reference_origin: (list) contigs to consider.
+            levels (tuple): Taxonomic levels to consider.
 
         Returns:
-            K: (sparse matrix) Bool(K[c,t]) == Contig c is of class t.
+            dataframe: Classification metrics. One line by taxonomic level.
+
+        Warning:
+            This function modify directly the attributes of the object.
         """
-        taxonomy = self.taxonomy if taxonomy is None else taxonomy
-        taxonomy = taxonomy.query("level=='{}'".format(level))
-        contigs = self.contigs if contigs is None else contigs
 
-        K = sparse.lil_matrix((len(contigs),len(taxonomy)), dtype=bool)
-        for pos,tax,origin in contigs.loc[:,("pos",level,"origin")].dropna().values:
-            if origin in reference_origin:
-                k = taxonomy.query("name==tax").pos.values 
-                K[pos,k] = 1
-        K = sparse.csc_matrix(K)
-        return K
+        results = []
 
-    def correspondence_matrix(self,K,B=None):
-        """
-        Build the (cluster X taxonomic class) correspondances matrix.  
+        for level in levels:
+            logger.info("Affiliation at the {} level...".format(level))
+            self.matrix[level] = {}
+            # Taxonomic reference matrix
+            self.matrix[level]["K"] = matrices.reference_membership(level,
+                                                                    self.contigs,
+                                                                    self.taxonomy[level])
 
-        Arguments:
-            K: (sparse matrix) Correspondance matrix.
-            B: (sparse matrix) Membership matrix (default self.membership).  
+            # recall, precision and F-measure matrix
+            (self.matrix[level]["Q"],
+             self.matrix[level]["R"],
+             self.matrix[level]["P"],
+             self.matrix[level]["F"]) = matrices.correspondence(self.matrix[level]["K"],
+                                                                self.matrix["B"])
+
+            # Associate clusters and taxonomic classes.
+            self.clusters, self.taxonomy[level] = associations.cluster_taxonomy(self.clusters,
+                                                                                self.taxonomy[level],
+                                                                                level,
+                                                                                self.matrix[level]["P"],
+                                                                                self.matrix[level]["R"])
+            # Associate the contigs with the classes
+            self.contigs =  associations.contig_taxonomy(self.contigs,
+                                                         self.taxonomy[level],
+                                                         self.clusters,
+                                                         level)
+
+            # Compute classification metrics.
+            logger.info("Computing the classification metrics")
+            results.append(ml_functions.classification_metrics(self.contigs.loc[:,[level,"predicted_"+level]],
+                                                               ref_col=level,
+                                                               pred_col="predicted_"+level))
+        return pandas.DataFrame(results,levels)
+
+    def cross_validation_affiliation(self,level="family", folds=10):
+        """Cross validation affiliation.
+
+        Cut the dataset (where a reference taxonomy exist) into <fold> equal parts
+        and use alternativly <fold-2> of them to do the affiliation. Compute the
+        classification metrics on the learning set and on the two remaining sets:
+        cross validation (used to select the model) and test (used to have an 
+        unbiased estimate of the error of the classification.)
+
+        Note: 
+            The splitting is stratified to keep the relative taxonomic classes in 
+            the same proportions in each fold. 
+
+        Args:
+            level (str): Taxonomic level to consider.
+            folds (int): number of folds for the cross-validation.
 
         Returns:
-            Q: Correspondance matrix
-            R: Recall (or coverage)
-            P: Precision 
+            dict: Dict of dataframes, one entry by set (learning,cv,test). 
+                In the dataframes are the classification metrics, one row by
+                selected cv-set. 
         """
-        logger.info("Building Q R and P") 
-        #print("Tried to multiply B : {} and K : {}".format(B.shape,K.shape))
-        try:
-            Q = np.dot(np.transpose(B),  K.todense())
-        except ValueError as e:
-            print("Tried to multiply B : {} and K : {}".format(B.shape,K.shape))
-            raise
+        results = {"train_set":[],
+                   "cv_set":[],
+                   "test_set":[]}
+        conditions = {}
+        contigs = self.contigs
+        taxonomy = self.taxonomy[level]
+        clusters = self.clusters
         
-        # Precision
-        Q_hsum = np.hstack([Q.sum(1)]*Q.shape[1])
-        P = Q / Q_hsum
-        P = np.nan_to_num(P)
+        # Stratified split according to the taxonomic level. 
+        contigs = ml_functions.split_dataset(contigs,level,folds)
+        logger.info("{} folds cross-validation".format(folds))
+        all_sets = frozenset(range(folds))
 
-        # Recall 
-        Q_vsum = np.vstack([Q.sum(0)]*Q.shape[0]) 
-        R = Q / Q_vsum
-        R = np.nan_to_num(R)
-                                    
-        A = np.sqrt(np.array(P)*np.array(R))
-        return Q,R,P,A
+        for cv_set,test_set in zip(range(folds),range(1,folds)+[0]):
+            logger.info(("Cross-validation fold {:2} "
+                         "({:.0%})").format(cv_set,cv_set/float(folds)))
 
-    def clustering_wise_pr(self, P, R, B, K):
-        """Compute the clustering wise recall and precision.
+            # Filtering conditions: 
+            train_set = list(all_sets - frozenset([cv_set,test_set]))
+            conditions["cv_set"] = "cvset_{}=={}".format(level, cv_set)
+            conditions["test_set"] = "cvset_{}=={}".format(level, test_set)
+            conditions["train_set"] = "cvset_{} in {}".format(level, train_set)
+
+            # Affiliation: 
+            K = matrices.reference_membership(level, contigs,
+                                              taxonomy, conditions["train_set"])
+            _,R,P,_ =  matrices.correspondence(K, self.matrix["B"])
+            clusters, taxonomy = associations.cluster_taxonomy(clusters, taxonomy,
+                                                               level, P, R)
+            contigs =  associations.contig_taxonomy(contigs, taxonomy, clusters,
+                                                    level)
+
+            # Computing metrics:
+            for set_ in conditions.keys():
+                df = contigs.query(conditions[set_]).loc[:,[level,"predicted_"+level]]
+                results[set_].append(ml_functions.classification_metrics(df,
+                                                                         ref_col=level,
+                                                                         pred_col="predicted_"+level))
+
+            # Cleaning the dataset for next step:
+            contigs = contigs.drop("predicted_"+level,1)
+            taxonomy = taxonomy.drop(["pos_cluster","recall"],1)
+            clusters = clusters.drop(["pos_"+level,"precision_"+level],1)
+        for set_ in results.keys():
+            results[set_] = pandas.DataFrame(results[set_],[range(folds)])
+        return results
+    
+
+
+
+    def learning_curve_affiliation(self,level="family", folds=10):
+        """Learning curve affiliation.
+
+        Cut the dataset (where a reference taxonomy exist) into <fold> equal parts
+        and increasingly one to <fold-1> of them to do the affiliation. Compute the
+        classification metrics on the learning set and on a randomly picked
+        cross validation set in the non used subset. 
+
+        Note: 
+            The splitting is stratified to keep the relative taxonomic classes in 
+            the same proportions in each fold. 
 
         Args:
-            P: (sparse matrix) Precision.
-            R: (sparse matrix) Recall.
-            B: (sparse matrix) Membership
-            K: (sparse matrix) Taxonomic classes
-        
+            levels (str): Taxonomic level to consider.
+            folds (int): number of folds for the cross-validation.
+
         Returns:
-            cwise_P: Clustering wise precision
-            cwise_R: Clustering wise recall 
+            dict: Dict of dict of dataframes, one entrie by level then one entry
+                by set (learning,cv). In the dataframes are the classification
+                metrics), one row by learning set size . 
         """
-
-        cwise_P = float(np.dot(B.sum(0),np.max(P,1)))
-        cwise_P /= B.sum()
-
-        cwise_R = float(np.dot(np.max(R,0),np.transpose(K.sum(0))))
-        cwise_R /= K.sum()
+    
+        results = {"train_set":[],
+                   "cv_set":[]}
+        conditions = {}
+        contigs = self.contigs
+        taxonomy = self.taxonomy[level]
+        clusters = self.clusters
         
-        return cwise_P, cwise_R
+        # Stratified split according to the taxonomic level. 
+        contigs = ml_functions.split_dataset(contigs,level,folds)
+        logger.info("{} folds cross-validation".format(folds))
+ 
 
-    def associations(self, P, R, level):
-        """Build associations
+        for cv_set in range(folds):
+            logger.info(("Cross-validation set {:2} "
+                         "({:.0%})").format(cv_set,cv_set/float(folds)))
 
-        Args:
-            P: Precision matrix (cluster X taxonomic Class) 
-            R: Recall matrix  (cluster X taxonomic Class) 
-            lvl: (str) taxonomic level of P & R 
+            remaining_sets = range(folds)
+            remaining_sets.pop(cv_set)
+            train_sets = [[remaining_sets[y] for y in range(x)] for x in range(1,folds)]
+            for train_set in train_sets:
+                logger.info("Training set of size {:2}".format(len(train_set)))
 
-        Side-Effects:
-            self.cluster: Add columns "pos_level" and "precision_level" 
-            self.taxonomy: Add columns "pos_cluster_level" and "recall_level"
-        """
+                # Filtering conditions: 
+                conditions["cv_set"] = "cvset_{}=={}".format(level, cv_set)
+                conditions["train_set"] = "cvset_{} in {}".format(level, train_set)
 
-        df = {}
-        df["pos"] = range(P.shape[0])
-        df["pos_"+level] = np.squeeze(np.asarray(np.argmax(P,1)))
-        df["precision_"+level] = np.squeeze(np.asarray(np.max(P,1)))
-        df = pandas.DataFrame(df)
-        df.loc[df["precision_"+level]==0,"pos_"+level] = np.nan
+                # Affiliation: 
+                K = matrices.reference_membership(level, contigs,
+                                                  taxonomy, conditions["train_set"])
+                _,R,P,_ =  matrices.correspondence(K, self.matrix["B"])
+                clusters, taxonomy = associations.cluster_taxonomy(clusters, taxonomy,
+                                                                   level, P, R)
+                contigs =  associations.contig_taxonomy(contigs, taxonomy, clusters,
+                                                        level)
 
-        self.clusters = pandas.merge(self.clusters,df,how='left')
+                # Computing metrics:
+                for set_ in results.keys():
+                    df = contigs.query(conditions[set_]).loc[:,[level,"predicted_"+level]]
+                    metrics = ml_functions.classification_metrics(df,
+                                                                  ref_col=level,
+                                                                  pred_col="predicted_"+level)
+                    metrics["train_size"] = len(train_set)
+                    metrics["cv_set"] = cv_set
+                    results[set_].append(metrics)
 
-        
-        df = {}
-        df["pos"] = range(R.shape[1])
-        df["recall_"+level] = np.squeeze(np.asarray(np.max(R,0)))
-        df["level"] = level
-        df["pos_cluster_"+level] = np.squeeze(np.asarray(np.argmax(R,0)))
-        df = pandas.DataFrame(df)
-        df.loc[df["recall_"+level]==0,"pos_cluster_"+level] = np.nan
+                # Cleaning the dataset for next step:
+                contigs = contigs.drop("predicted_"+level,1)
+                taxonomy = taxonomy.drop(["pos_cluster","recall"],1)
+                clusters = clusters.drop(["pos_"+level,"precision_"+level],1)
+        for set_ in results.keys():
+            results[set_] = pandas.DataFrame(results[set_])
+        return results
+    
 
-        self.taxonomy = pandas.merge(self.taxonomy,df,how='left')
-     
+    #--------------------------------------------------------------------------#
+    # PART 4: Pickle-save
+    #--------------------------------------------------------------------------#
 
-    def affiliate(self, B=None):
-        """
-        Affiliate each contig with the maximal membership cluster.
-
-        Args:
-            B: (scipy.sparse) Membership matrix
-        
-        Returns: 
-            aff: (dataframe) 
-
-        Side-effects: 
-            self.contigs: 
-        """
-        cm = {}
-        cm["pos_cluster"] = np.squeeze(np.asarray(np.argmax(B,1)))
-        cm["membership"] = np.squeeze(np.asarray(np.max(B,1)))
-        cm["pos"] = range(B.shape[0])
-        cm = pandas.DataFrame(cm)
-        cm.loc[cm["membership"]==0,"pos_cluster"] = np.nan
-        self.contigs = pandas.merge(self.contigs,cm)
-
-        
-        aff =  pandas.merge(self.contigs,
-                            self.clusters,
-                            left_on="pos_cluster",
-                            right_on="pos",
-                            suffixes=["","_clusters"]).loc[:,( "pos_cluster","name","family","genus","origin",
-                                                               "pos_family", "pos_genus", "membership")].sort(axis=1)
-
-        for l in ("family","genus"):
-            aff = pandas.merge(aff,self.taxonomy.query("level=='{}'".format(l)).loc[:,("pos","name")],
-                               how="left",
-                               left_on="pos_{}".format(l), right_on="pos",
-                               suffixes=["","_{}".format(l)])
-
-
-        aff = aff.drop(["pos","pos_family","pos_genus"],1)
-        aff.rename(columns={"name_family":"predicted_family",
-                            "name_genus":"predicted_genus",
-                            "family":"reference_family",
-                            "genus":"reference_genus",
-                            "pos_cluster":"cluster_max_membership"},
-                   inplace=True)
-
-        return aff
-
-    def compute_summary(self):
-        summary = {"clustering_wise_precision":[],
-                   "clustering_wise_recall":[],
-                   "level":[],
-                   "name":[],
-                   "classes":[],
-                   "recall_micro":[],
-                   "precision_micro":[],
-                   "specificity_micro":[],
-                   "accuracy_micro":[],
-                   "recall_macro":[],
-                   "precision_macro":[],
-                   "specificity_macro":[],
-                   "accuracy_macro":[],
-                   "contigs":[],
-                   "origin":[],
-                   "affiliated_contigs":[],
-                   "reference_contigs":[],
-                   }
-
-        for o in ["origin=='refseq_jan14'","origin!='refseq_jan14'"]:
-            logger.info("FILTERING AFF for {}".format(o))
-            filtered_aff = self.aff.query(o)
-            if len(filtered_aff):
-                for K,QRPA,level in zip([self.Kf,self.Kg], [self.QRPA_f,self.QRPA_g], ["family","genus"]):
-
-                    summary["name"].append(self.name)
-                    summary["level"].append(level)
-                    summary["origin"].append(o)
-
-                    cwp,cwr =  self.clustering_wise_pr(QRPA[2], QRPA[1], self.B, K)
-                    summary["clustering_wise_precision"].append(cwp)
-                    summary["clustering_wise_recall"].append(cwr)
-
-
-
-                    classes = filtered_aff.loc[:,"reference_{}".format(level)].drop_duplicates().dropna().values
-
-                    summary["classes"].append(len(classes))
-                    summary["contigs"].append(len(self.contigs))
-
-
-                    summary["recall_micro"].append(0)
-                    summary["precision_micro"].append(0)
-                    summary["specificity_micro"].append(0)
-                    summary["accuracy_micro"].append(0)
-
-                    conf = {"TP":0,"TN":0,"FP":0,"FN":0}
-                    aff = filtered_aff.dropna(subset=["reference_{0}".format(level)])
-                    summary["affiliated_contigs"].append(len(filtered_aff))
-                    summary["reference_contigs"].append(len(aff)) 
-                    for cat in classes :
-                        TP = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}=='{1}'".format(level,cat))))
-                        TN = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}!='{1}'".format(level,cat))))
-                        FP = float(len(aff.query("reference_{0}!='{1}'&predicted_{0}=='{1}'".format(level,cat))))
-                        FN = float(len(aff.query("reference_{0}=='{1}'&predicted_{0}!='{1}'".format(level,cat))))
-                        conf["TP"] += TP
-                        conf["TN"] += TN
-                        conf["FP"] += FP
-                        conf["FN"] += FN
-                        if TP:
-                            summary["recall_micro"][-1] += TP / (TP+FN)
-                            summary["precision_micro"][-1] += TP / (TP+FP)
-                        if TN:
-                            summary["specificity_micro"][-1]+= TN / (FP + TN)
-                        summary["accuracy_micro"][-1] += (TP + TN) / (TP+FP+FN+TN)
-                        
-                    if conf["TP"]+conf["FN"]:
-                        summary["recall_macro"].append(conf["TP"]/(conf["TP"]+conf["FN"]))
-                    else:
-                        summary["recall_macro"].append(0)
-                        
-                    if conf["TP"]+conf["FP"]:
-                        summary["precision_macro"].append(conf["TP"]/(conf["TP"]+conf["FP"]))
-                    else:
-                        summary["precision_macro"].append(0) 
-                    if conf["FP"]+conf["TN"]:
-                        summary["specificity_macro"].append(conf["TN"]/(conf["FP"]+conf["TN"]))
-                    else:
-                        summary["specificity_macro"].append(0)
-
-                    if conf["TP"]+conf["TN"]+conf["FP"]+conf["FN"]:
-                        summary["accuracy_macro"].append((conf["TP"]+conf["TN"])/(conf["TP"]+conf["TN"]+conf["FP"]+conf["FN"]))
-                    else:
-                        summary["accuracy_macro"].append(0)
-                        
-                    if len(classes):
-                        summary["recall_micro"][-1] /= len(classes)
-                        summary["precision_micro"][-1] /= len(classes)
-                        summary["specificity_micro"][-1]/= len(classes)
-                        summary["accuracy_micro"][-1] /= len(classes)
-                    
-                    
-        return pandas.DataFrame(summary)
-
-    def aff_contig(self,level="family",contigs=None,clusters=None,taxonomy=None):
-        
-        contigs = self.contigs if contigs is None else contigs
-        clusters = self.clusters if clusters is None else clusters
-        taxonomy = self.taxonomy if taxonomy is None else taxonomy
-        
-        m1 = pandas.merge(contigs.reset_index(),
-                          clusters,
-                          left_on="pos_cluster",right_on="pos",
-                          how="left",
-                          suffixes=["__contig","__cluster"])
-
-        m2 = pandas.merge(m1,
-                          taxonomy.query("level=='{}'".format(level)).loc[:,["pos","name"]],
-                          left_on="pos_{}".format(level), right_on="pos",
-                          how="left",
-                          suffixes=["","__{}".format(level)])
-
-        aff = m2.loc[:,["name__contig","name"]]
-        aff.columns = ["contig",level]
-        aff[level] = aff[level].fillna("Non affiliated")
-        print aff.groupby(level).count()
-        return aff  
-
-    def nodes_properties(self):
-        """ Compute several node specific statistics"""
-
-        D = networkx.from_scipy_sparse_matrix(self.network)
-        bc = networkx.betweenness_centrality(D)
-        data_bc = pandas.DataFrame(pandas.Series(bc))
-        data_bc.columns = ["betweeness_centrality"]
-        self.contigs = pandas.merge(self.contigs,data_bc,left_on="pos",right_index=True)
-
-        # Degree 
-        degr = networkx.degree(D)
-        degr = pandas.DataFrame(pandas.Series(degr))
-        degr.columns = ["degree"]
-        self.contigs = pandas.merge(self.contigs,degr,left_on="pos",right_index=True)
-
-        # Clustering coeffciennt 
-        clcoef = pandas.DataFrame(pandas.Series(networkx.clustering(D)))
-        clcoef.columns = ["clustering_coef"]
-        self.contigs = pandas.merge(self.contigs,clcoef,left_on="pos",right_index=True)
-
-    def nodes_size(self):
-        """Size in bp of the contigs. Should probably be moved in the genomes modules """
-        if self.contigs.index.name != "name":
-            self.contigs.reset_index(inplace=True)
-            self.contigs.set_index("name",inplace=True)
-
-  
-        rec = SeqIO.parse(options.data_folder+"refseq/phage.genomic.gbff","gb")
-        for r in rec:
-            name = r.id.split(".")[0]
-            self.contigs.loc[name,"size"] = len(r.seq)
-            
-        rec = SeqIO.parse(options.data_folder+"tara/tara_c10.fna","fasta")
-        for r in rec:
-            self.contigs.loc[r.id,"size"] = len(r.seq)
-
-        self.contigs.sort("size",ascending=False,inplace=True)
-        self.contigs["size_rank"] = [i for i,n in enumerate(self.contigs.size)]
-
-    def cluster_network_cytoscape(self,fi_ntw=None,fi_clust_info=None,network=None):
-        fi_ntw = self.name+"_contigsclusters_network.ntw"
-        fi_clust_info = self.name + "_contigsclusters_network.info"
-        info = self.clusters
-
-        
-        info = pandas.merge(info,self.taxonomy.query("level=='family'"),
-                            how="left",
-                            left_on="pos_family",right_on="pos",
-                            suffixes=["","__family"]
-                            )
-        #print info
-        info = pandas.merge(info,self.taxonomy.query("level=='genus'"),
-                            how="left",
-                            left_on="pos_genus",right_on="pos",
-                            suffixes=["","__genus"]
-                            )
-        info.reset_index(inplace=True)
-        info.set_index("name",inplace=True)
-        #print info
-        info = info.loc[:,["size","name__family","name__genus"]]
-        info.to_csv(fi_clust_info,sep="\t")
-       
-        network = self.network if network is None else network
-  
-
-        L = self.link_clusters(network=network)
-        
-        cluster_idx = self.clusters.reset_index()
-        cluster_idx.set_index("pos",inplace=True)
-        #print cluster_idx
-        with open(fi_ntw,"w") as f:
-            f.write("Cluster_1\t")
-            f.write("Cluster_2\t")
-            f.write("inter_ov_intra")
-            f.write("\n")
-            for r in range(L.shape[0]):
-                for c in range(r):
-                    if L[r,c]:
-                        n1 = cluster_idx.ix[r,"name"] if r != L.shape[0]-1 else "non-clustered" 
-                        n2 = cluster_idx.ix[c,"name"] if c != L.shape[0]-1 else "non-clustered"
-                        f.write("\t".join([str(n1),
-                                           str(n2),
-                                           str(L[r,c])]))
-                        f.write("\n")        
 
     def to_pickle(self,path=None):
         """ Pickle (serialize) object to file path."""
-        path = self.name+".pkle" if path is None else path  
+        path = self.name+".pkle" if path is None else path
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
 def read_pickle(path):
-    """Read pickled object in file path.""" 
+    """Read pickled object in file path."""
     with open(path, 'rb') as fh:
         return pickle.load(fh)
