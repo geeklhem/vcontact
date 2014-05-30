@@ -29,7 +29,7 @@ class GenomeCluster(object):
             clusters: (pandas df) Contig clusters
             mcl_results: (list of list) mcl_result[cluster][prot]
     """
-    def __init__(self,pcm,inflation=2,threshold=None,name=None):
+    def __init__(self,pcm,inflation=2,threshold=None,name=None,membership_simple=False):
         """
         Init the object with a pc-profile object and perform the clustering
 
@@ -39,8 +39,9 @@ class GenomeCluster(object):
             inflation (float): inflation for mcl.
             threshold (float): minimal significativity. 
             name (str): A name to identify the object.
+            membership_simple (bool): if false use non boolean membership. 
         """
-        self.name = "gc_mcl{}".format(inflation) if name is None else name
+        self.name = "gc_sig{}_mcl{}".format(threshold,inflation) if name is None else name
         self.inflation = inflation
         self.thres = threshold
 
@@ -66,9 +67,12 @@ class GenomeCluster(object):
 
         self.matrix = {}
         logger.info("Computing membership matrix...")
-        self.matrix["B"] = matrices.membership(self.mcl_results,
-                                          self.network,
-                                          self.contigs)
+        if membership_simple:
+            self.matrix["B"] = matrices.bool_membership(self.contigs)
+        else:
+            self.matrix["B"] = matrices.membership(self.mcl_results,
+                                                   self.network,
+                                                   self.contigs)
         self.contigs = associations.contig_cluster(self.contigs,self.matrix["B"])
 
 

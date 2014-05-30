@@ -167,12 +167,14 @@ class PCMatrix(object):
     def network(self,matrix,singletons,thres=1):
         """
         Compute the hypergeometric-similarity contig network.
-        INPUT:
-        - matrix (scipy.sparse) : contigs x protein clusters :
-          M(c,p) == True <-> PC p is in Contig c.
-        - thres (float) : Minimal significativity to store an edge value.
-        OUTPUT:
-        - S (scipy.sparse lil matrix, symmetric) : contigs x contigs.
+
+        Args:
+            matrix (scipy.sparse)x: contigs x protein clusters :
+                M(c,p) == True <-> PC p is in Contig c.
+            thres (float): Minimal significativity to store an edge value.
+        
+        Return
+            scipy.sparse: S symmetric lil matrix, contigs x contigs.
           S(c,c) = sig(link)
         """
 
@@ -228,15 +230,17 @@ class PCMatrix(object):
         """
         Compute the hypergeometric-similarity pc network.
 
-        /!\ Use only the PCs that are present in 3 contigs or more.
+        Warning:
+            Use only the PCs that are present in 3 contigs or more.
 
-        INPUT:
-        - matrix (scipy.sparse) : contigs x protein clusters :
-          M(c,p) == True <-> PC p is in Contig c.
-        - thres (float) : Minimal significativity to store an edge value.
-        OUTPUT:
-        - S (scipy.sparse lil matrix, symmetric) : PCs x PCs
-          S(c,c) = sig(link)
+        Args: 
+            matrix (scipy.sparse): contigs x protein clusters :
+                M(c,p) == True <-> PC p is in Contig c.
+            thres (float): Minimal significativity to store an edge value.
+        
+        Returns:
+            scipy.sparse: Symmetric lil_matrix, PCs x PCs
+                S(c,c) = sig(link)
         """
 
         matrix = self.matrix if matrix == None else matrix

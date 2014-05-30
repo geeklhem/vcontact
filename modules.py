@@ -112,7 +112,7 @@ class Modules(object):
         # Run MCL
         logger.info("Clustering the pc similarity-network")
         if not os.path.exists(fi_out):
-            subprocess.call(("mcl {0} -o {1} --abc"
+            subprocess.call(("mcl {0} -o {1} --abc "
                              "-I {2}").format(fi_in,fi_out,I),
                             shell=True)
             logger.debug("MCL({}) results are saved in {}.".format(I,fi_out))
@@ -253,7 +253,8 @@ class Modules(object):
 
 
         # contig in cluster
-        xy = contigs.reset_index().sort("pos").ix[:,["mcl_cluster","pos"]].dropna(subset=["mcl_cluster"]).values
+        xy = contigs.reset_index().sort("pos").ix[:,["pos_cluster","pos"]].dropna(subset=["pos_cluster"]).values
+        print xy
         pa_matrix = sparse.coo_matrix( ([1]*len(xy), zip(*xy) ),
                                        shape=(nb_clusters,nb_contigs) )
 

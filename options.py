@@ -20,6 +20,7 @@ colors = {"refseq":"#B31B1B",
           "pink":"#f781bf",
           "grey":"#999999",
           "Non affiliated":"#999999",
+          "Non-affiliated":"#999999",
           "Inoviridae":"#f781bf",}
 
 

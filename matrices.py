@@ -54,6 +54,24 @@ def membership(mcl_results, network, nodes):
     B = np.nan_to_num(B)
     return B
 
+def bool_membership(contigs):
+    """Membership matrix of the node to the clusters.
+
+    Args:
+        contigs (dataframe): with column pos and pos_cluster
+
+    Returns:
+        sparse_matrix: B, Membership matrix #node X #clusters,
+            B(g,c) = bool(g \in c)
+    """
+    nb_contigs = len(contigs)
+    nb_clusters = contigs.pos_cluster.max()+1
+    xy = contigs.reset_index().ix[:,["pos","pos_cluster"]].dropna(subset=["pos_cluster"]).values
+    B = sparse.coo_matrix( ([1.0]*len(xy), zip(*xy) ),
+                           shape=(nb_contigs,nb_clusters) )
+    B = B.todense()
+    return B
+
 
 def reference_membership(level, contigs, taxonomy,
                          condition="origin=='refseq_jan14'"):
@@ -140,3 +158,39 @@ def clustering_wise_metrics(P, R, B, K):
 
     cwise_F = 2 * (cwise_P * cwise_R)/(cwise_P + cwise_R)
     return cwise_P, cwise_R, cwise_F
+
+
+def link_clusters(network,contigs,col_cluster="pos_cluster"):
+    """Link the clusters 
+    
+    Args:
+        network (sparse-matrix): similarity network.
+        contigs (dataframe): with columns pos (position in the matrix) and
+            "col_cluster" (cluster of the contig).
+        col_cluster (str): column to use in "contigs".
+
+    Returns:
+        sparse-matrix: Contig cluster network, edge weight is inter over intra 
+           total similarity. 
+    """
+    contigs = contigs.dropna(subset=[col_cluster])
+
+    # bool(Z[contig,cluster]) == contig is in cluster 
+    Z = sparse.coo_matrix(([1.0]*len(contigs),
+                           [contigs.pos,contigs[col_cluster]]))
+    Z = Z.tocsr()
+
+    # S = Z^{T}NZ[cluster,cluster] = sum of weights between the two clusters
+    S = np.transpose(Z).dot(network.dot(Z))
+        
+    # Each column is the diagonal of S. (aka intra sum of weight)
+    sii = np.vstack([S.diagonal()] * S.shape[0])
+
+    # Inter/intra links
+    L = (S + S.T).todense() / (sii + sii.T)
+
+    # The diagonal is null
+    np.fill_diagonal(L,0)
+    
+    L = np.nan_to_num(L)
+    return L
