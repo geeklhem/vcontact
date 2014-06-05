@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.associations &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.associations</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Functions to build the associations between the objects from the matrices. &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span>
+
+<div class="viewcode-block" id="cluster_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.cluster_taxonomy">[docs]</a><span class="k">def</span> <span class="nf">cluster_taxonomy</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span><span class="n">level</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add the associations to the cluster and taxonomy dataframes.</span>
+<span class="sd">    Using the maximum of precision taxonomic class of each cluster</span>
+<span class="sd">    and the maximum of recall cluster of each taxonomic class.</span>
+<span class="sd">    If this maximum is null, the position is set to NaN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        clusters (dataframe): to modify</span>
+<span class="sd">        taxonomy (dataframe): to modify</span>
+<span class="sd">        level (str): taxonomic level of P &amp; R</span>
+<span class="sd">        P (sparse_matrix): Precision matrix (cluster X taxonomic class)</span>
+<span class="sd">        R (sparse_matrix): Recall matrix  (cluster X taxonomic class)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dataframe: clusters with added columns &quot;pos_level&quot; and &quot;precision_level&quot;</span>
+<span class="sd">        dataframe: taxonomy with added columns &quot;pos_cluster&quot; and &quot;recall&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;pos_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;precision_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c"># If the max of precision is null, do not associate.</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">&quot;precision_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span><span class="s">&quot;pos_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">clusters</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span><span class="n">df</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s">&#39;left&#39;</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;recall&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c"># If the max of recall is null, do not associate.</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">&quot;recall&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">taxonomy</span><span class="p">,</span><span class="n">df</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s">&#39;left&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span>
+</div>
+<div class="viewcode-block" id="contig_cluster"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.contig_cluster">[docs]</a><span class="k">def</span> <span class="nf">contig_cluster</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Associate each contig with its maximal-membership cluster.</span>
+<span class="sd">    If the maximal-membership is null, the mbship cluster position</span>
+<span class="sd">    is set to NaN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        contigs (dataframe): the contigs, with:</span>
+<span class="sd">            pos: the position of the contig in the matrix.</span>
+<span class="sd">        B (sparse_matrix): Membership matrix</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dataframe: contigs with pos_cluster_mbship column added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">cm</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">cm</span><span class="p">[</span><span class="s">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">cm</span><span class="p">[</span><span class="s">&quot;membership&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">B</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">cm</span><span class="p">[</span><span class="s">&quot;pos_cluster_mbship&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">B</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">cm</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span>
+
+    <span class="c"># If the max membership is null, do not associate.</span>
+    <span class="n">cm</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cm</span><span class="p">[</span><span class="s">&quot;membership&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span><span class="s">&quot;pos_cluster_mbship&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">contigs</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span><span class="n">cm</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">contigs</span>
+</div>
+<div class="viewcode-block" id="contig_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.contig_taxonomy">[docs]</a><span class="k">def</span> <span class="nf">contig_taxonomy</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span>
+                     <span class="n">cluster_choice</span><span class="o">=</span><span class="s">&quot;pos_cluster_mbship&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Associate each contig with its predicted taxonomic class</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        contigs (dataframe): the contigs, with a &quot;cluster_choice&quot; column.</span>
+<span class="sd">        taxonomy (dataframe): names of the taxonomic classes at this level.</span>
+<span class="sd">        level (str): taxonomic level</span>
+<span class="sd">        clustering_choice (str): column in which the cluster of a contig</span>
+<span class="sd">            can be found.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dataframe: contigs with &quot;predicted_level&quot; column added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cname</span> <span class="o">=</span> <span class="s">&quot;predicted_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+    <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span>
+    <span class="n">clusters</span> <span class="o">=</span> <span class="n">clusters</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">clust_pos</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">contigs</span><span class="p">[</span><span class="n">cluster_choice</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">clust_pos</span><span class="p">):</span>
+            <span class="n">tax_pos</span> <span class="o">=</span> <span class="n">clusters</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">clust_pos</span><span class="p">,</span> <span class="s">&quot;pos_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">tax_pos</span><span class="p">):</span>
+                <span class="n">contigs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="n">cname</span><span class="p">]</span> <span class="o">=</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="n">tax_pos</span><span class="p">]</span>
+    <span class="n">contigs</span><span class="o">.</span><span class="n">fillna</span><span class="p">({</span><span class="n">cname</span><span class="p">:</span><span class="s">&quot;Non affiliated&quot;</span><span class="p">},</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">contigs</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

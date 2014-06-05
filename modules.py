@@ -1,24 +1,23 @@
 """
 Modules are groups of protein families
 """
-
-import pc_matrix
-import numpy as np
-import scipy.sparse as sparse
-import logging
-import pandas
 import cPickle as pickle
-import networkx
-import options
-from Bio import SeqIO
+import logging
 import subprocess
 import os
+
+import pandas
+import numpy as np
+import scipy.sparse as sparse
 import scipy.stats as stats
-from itertools import combinations
+
+import pc_matrix
+import options
+
 logger = logging.getLogger(__name__)
 
 class Modules(object):
-    def __init__(self,pcm,threshold=10,name=None):
+    def __init__(self,pcm,threshold=10,name=None,keyword_matrix_file=None):
         """
 
         Args:
@@ -40,6 +39,8 @@ class Modules(object):
         else:
             self.features,self.contigs,self.network,self.matrix = pcm
 
+        self.features = self.features.copy()
+
         # Filter the network according to the threshold:
         before = self.network.getnnz()
         self.network = self.network.multiply(self.network>=self.thres)
@@ -48,13 +49,40 @@ class Modules(object):
 
         # Define the modules
         self.modules = self.define_modules(self.network)
-        #self.matrix_module = self.module_in_contigs()
-        #self.link_modules_and_clusters
-    
+        self.matrix_module = self.module_in_contigs()
+
+        if keyword_matrix_file is not None:
+            self.modules = self.load_keywords(keyword_matrix_file,self.modules,self.features)      
+                
     def __repr__(self):
         return ("Modules object {}, {} modules, (contigs, pc) : {},"
                 "sig. threshold {} ").format(self.name, len(self.modules),
                                              self.matrix.shape, self.thres)
+
+    def load_keywords(self,fi,modules,features):
+        """ Load the keywords for each modules 
+
+        Args: 
+            fi (str): a file containing the pickled keyword matrix
+            modules (dataframe): informations about the modules.
+            features (dataframe): informations about the protein clusters.
+
+        Returns:
+            dataframe: the dataframe module with the "keys" column added.
+        """
+        
+        with open(fi,"r") as f:
+            keyword_matrix = pickle.load(f)            
+
+        modules.sort("pos",inplace=True)
+        
+        for mod, data in features.groupby("module"):
+            count = keyword_matrix[:,data.pos.values].sum(1)
+            keys = [(k,int(count[n]))
+                   for n,k in enumerate(options.keywords) if count[n]]
+            keys.sort(reverse=True, key=lambda x:x[1])
+            modules.ix[mod,"keys"] = ", ".join(["{} ({})".format(x[0],x[1]) for x in keys])
+        return modules
 
     def define_modules(self,matrix,I=5):
         """
@@ -124,8 +152,8 @@ class Modules(object):
         logger.info("Loading the clustering results")
         if not os.path.exists(fi_dataframe) or not os.path.exists(fi_feat):
             with open(fi_out) as f:
-               c = [ line.rstrip("\n").split("\t")
-                     for line in f]
+                c = [ line.rstrip("\n").split("\t")
+                      for line in f]
             c = [x for x in c if len(x) > 1] # Drop singletons 
             name = ["module_{}".format(i) for i in range(len(c))]
             size = [len(i) for i in c]
@@ -167,14 +195,14 @@ class Modules(object):
         """
         Compute the presence of modules in each contig
 
-        Input :
-            matrix: (scipy.sparse), M[contigs,pc] =  "pc in contig" (bool)
-            contigs: (pandas.DataFrame)
-            modules: (pandas.DataFrame) with columns : pos,
+        Args:
+            matrix (scipy.sparse):, M[contigs,pc] =  "pc in contig" (bool)
+            contigs (pandas.DataFrame):
+            modules (pandas.DataFrame): with columns : pos,
 
         Returns:
-            S: (matrix), S[contig,module] = proportions of module's pcs
-                present in contig (\in [0,1])
+            matrix: S, S[contig,module] = proportions of module's pcs
+                present in contig (in [0,1])
         """
 
         matrix = self.matrix if matrix is None else matrix
@@ -197,20 +225,19 @@ class Modules(object):
 
         return S
 
-    def link_modules_and_clusters(self, clusters,
-                                  matrix_modules=None,
-                                  modules=None, contigs=None,
-                                  thres=1,
-                                  own_threshold=0.7):
+    def link_modules_and_clusters(self, clusters, contigs, modules,
+                                  matrix_modules,
+                                  thres, own_threshold):
         """
         Link the modules with the contigs clusters
         using the hypergeometric formula.
 
         Args:
-            matrix_modules: (scipy.sparse)
+            matrix_modules (scipy.sparse):
                 bool(M[contig,module]>=own_threshold): module is present in contig
-            modules: (pandas.DataFrame)
-            clusters: (pandas.DataFrame)
+            modules (pandas.DataFrame): information about the protein modules
+            clusters (pandas.DataFrame): information about the contig clusters
+            contigs (pandas.DataFrame): information about the contigs
             thres: (float) significativity threshold.
             own_threshold: minimal proportion of PCs to "own" the module. 
 
@@ -225,10 +252,6 @@ class Modules(object):
                 b: number of contigs owning module m.
         """
 
-        matrix_modules = self.matrix_module if matrix_modules is None else matrix_modules
-        modules = self.modules if modules is None else modules
-        contigs = self.contigs if contigs is None else contigs
-
         # Filtering 
         non_filtered = matrix_modules.getnnz()
         matrix_modules = matrix_modules >= own_threshold
@@ -240,7 +263,7 @@ class Modules(object):
         
         nb_contigs,nb_modules = matrix_modules.shape
         nb_clusters = len(clusters)
-        matrix_module = matrix_modules.tocsc()
+        matrix_modules = matrix_modules.tocsc()
         logger.info(("Linking {} modules with "
                       "{} contigs clusters...").format(nb_modules,
                                                         nb_clusters))
@@ -253,8 +276,8 @@ class Modules(object):
 
 
         # contig in cluster
-        xy = contigs.reset_index().sort("pos").ix[:,["pos_cluster","pos"]].dropna(subset=["pos_cluster"]).values
-        print xy
+        xy = contigs.reset_index().ix[:,["pos_cluster","pos"]].dropna(subset=["pos_cluster"]).sort("pos").values
+        #print xy
         pa_matrix = sparse.coo_matrix( ([1]*len(xy), zip(*xy) ),
                                        shape=(nb_clusters,nb_contigs) )
 
@@ -264,9 +287,6 @@ class Modules(object):
 
         # Number of comparisons
         logT = np.log10(nb_clusters*nb_modules)
-
-        # Number of actual comparisons
-        total_c = float(c_values.getnnz())
 
         S = sparse.lil_matrix((nb_clusters,nb_modules))
         for A,B in zip(*c_values.nonzero()) :
@@ -280,21 +300,29 @@ class Modules(object):
         logger.info("Network done {0[0]} clusters, {0[1]} modules and {1} edges.".format(S.shape,S.getnnz()))
         return S
 
-    def link_modules_and_clusters_df(self,clusters,modules=None, matrix_modules_and_clusters=None):
+    def link_modules_and_clusters_df(self,clusters, contigs, modules=None, matrix_module=None,
+                                     thres=1, own_threshold=0.7):
         """Returns the dataframe giving the association between clusters and modules
         
         Args:
-            clusters: (dataframe) informations about the clusters
-            matrix_modules_and_clusters: (sparse matrix) significativity of the associations
-            modules: (dataframe) information about the modules
+            matrix_modules (scipy.sparse):
+                bool(M[contig,module]>=own_threshold): module is present in contig
+            modules (pandas.DataFrame): information about the protein modules
+            clusters (pandas.DataFrame): information about the contig clusters
+            contigs (pandas.DataFrame): information about the contigs
+            thres: (float) significativity threshold.
+            own_threshold: minimal proportion of PCs to "own" the module. 
+
+
         Returns:
             A dataframe containing the position of the module, 
             of the cluster, the significativity of the association 
             and merged with the lines from modules and clusters.. 
         """
-        matrix = self.link_modules_and_clusters(clusters) if matrix_modules_and_clusters is None else matrix_modules_and_clusters
         modules = self.modules if modules is None else modules
-        
+        matrix_module = self.matrix_module if matrix_module is None else matrix_module
+
+        matrix = self.link_modules_and_clusters(clusters,contigs,modules,matrix_module,thres,own_threshold)
         matrix = matrix.todok().items()
         data = pandas.DataFrame({'pos_module': [x[0][1] for x in matrix],
                                  "pos_cluster": [x[0][0] for x in matrix],
@@ -305,32 +333,5 @@ class Modules(object):
         data = pandas.merge(data, clusters,
                             left_on="pos_cluster",right_on="pos",
                             how="left",
-                            suffixes=["module","cluster"])
+                            suffixes=["_module","_cluster"])
         return data
-
-"""
-def extract_modules(clusters,mod,keyword_matrix=None):
-    matrix =  mod.matrix_modules_and_clusters[clusters,:].todok().items()
-    pel_m_c = [x[0][0] for x in matrix]
-    pel_m_s = [x[1] for x in matrix]
-    pel_m = [x[0][1] for x in matrix]
-
-    data = {'pos_module':pel_m,
-            "pos_cluster":[],
-            "sig":pel_m_s,
-            "pcs":[],
-            "proteins":[],
-            "keys":[]}
-
-    for s,m,c in zip(pel_m_s,pel_m,pel_m_c):
-        data["pos_cluster"].append(clusters[c])
-a = mod.features.query("module==m")
-        data["pcs"].append(len(a))
-        data["proteins"].append(a.size.sum())
-        if keyword_matrix != None:
-            count = keyword_matrix[:,a.pos.values].sum(1)
-            data["keys"].append(", ".join(["{} ({})".format(k,int(count[n])) for n,k in enumerate(options.keywords) if count[n] ]))
-        else:
-            data["keys"].append(None)
-    return pandas.DataFrame(data)
-"""

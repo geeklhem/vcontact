@@ -1,0 +1,183 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.tools &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.tools</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Usefull functions and snippets &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">networkx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="summary"><a class="viewcode-back" href="../../vcontact.html#vcontact.tools.summary">[docs]</a><span class="k">def</span> <span class="nf">summary</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span><span class="n">nodeinfo</span><span class="p">,</span><span class="n">criterion</span><span class="o">=</span><span class="s">&quot;origin&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Summary of some graph proterties</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        matrix: (sparse matrix) adjacency matrix</span>
+<span class="sd">        nodeinfo: (dataframe) with:</span>
+<span class="sd">            name: node name (str).</span>
+<span class="sd">            pos: node position in the matrix (int)</span>
+<span class="sd">            &quot;criterion&quot;: a column to distinguish categories of nodes. </span>
+<span class="sd">        criterion: column to use to distinguish nodes. </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        A dict. containing informations about the graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">categories</span> <span class="o">=</span> <span class="n">nodeinfo</span><span class="p">[</span><span class="n">criterion</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+    
+    <span class="n">graph</span> <span class="o">=</span> <span class="n">networkx</span><span class="o">.</span><span class="n">from_scipy_sparse_matrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+    <span class="c">#networkx.relabel_nodes(graph,</span>
+    <span class="c">#                       dict(zip(nodeinfo.pos,</span>
+    <span class="c">#                                nodeinfo.name)),</span>
+    <span class="c">#                       copy=False)</span>
+
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;nodes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">order</span><span class="p">()</span> 
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+
+    <span class="n">cc</span> <span class="o">=</span> <span class="n">networkx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;connected_components&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span>
+    
+    <span class="n">lcc</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cc</span><span class="p">]</span>
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;non_connected_nodes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lcc</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;biggest_connected_component&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">lcc</span><span class="p">)</span>
+
+    <span class="n">non_connected</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">len_</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cc</span><span class="p">,</span><span class="n">lcc</span><span class="p">)</span> <span class="k">if</span> <span class="n">len_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">info_non_connected</span> <span class="o">=</span> <span class="n">nodeinfo</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">non_connected</span><span class="p">,:]</span><span class="o">.</span><span class="n">fillna</span><span class="p">({</span><span class="n">criterion</span><span class="p">:</span> <span class="s">&quot;No category&quot;</span><span class="p">})</span>
+                                                                               
+    <span class="n">info</span><span class="p">[</span><span class="s">&quot;non_connected_by_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">criterion</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">info_non_connected</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">criterion</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">info</span> 
+</div>
+<div class="viewcode-block" id="filtering"><a class="viewcode-back" href="../../vcontact.html#vcontact.tools.filtering">[docs]</a><span class="k">def</span> <span class="nf">filtering</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">threshold</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Filter a sparse matrix according to a threshold</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        matrix: (sparse matrix)</span>
+<span class="sd">        threshold: (float)</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        The sparse matrix where every cell &lt;= threshold are now null</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">matrix</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">matrix</span><span class="o">&gt;=</span><span class="n">threshold</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="summary_assoc"><a class="viewcode-back" href="../../vcontact.html#vcontact.tools.summary_assoc">[docs]</a><span class="k">def</span> <span class="nf">summary_assoc</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">criterion</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name_thres</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">boolmatrix</span> <span class="o">=</span> <span class="n">matrix</span> <span class="o">&gt;</span> <span class="n">thres</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;assoc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">boolmatrix</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;assoc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">boolmatrix</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">report</span><span class="p">[</span><span class="s">&quot;objects&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">report</span><span class="p">[</span><span class="s">&quot;ref_objects&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span>
+    <span class="n">assoc_by_element</span> <span class="o">=</span> <span class="n">boolmatrix</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">non_connected</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">assoc_by_element</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">report</span><span class="p">[</span><span class="s">&quot;associated_to_nothing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_connected</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">report</span><span class="p">[</span><span class="s">&quot;associated_to_nothing&quot;</span><span class="p">]</span><span class="o">&lt;=</span> <span class="n">name_thres</span><span class="p">:</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;associated_to_nothing_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">non_connected</span><span class="p">]</span> 
+
+
+    <span class="n">report</span><span class="p">[</span><span class="s">&quot;most_associated_links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">assoc_by_element</span><span class="p">)</span>
+    <span class="n">pos_ma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">assoc_by_element</span><span class="p">)</span>
+    <span class="n">report</span><span class="p">[</span><span class="s">&quot;most_associated_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="n">pos_ma</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">criterion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">info_non_connected</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">non_connected</span><span class="p">,:]</span><span class="o">.</span><span class="n">fillna</span><span class="p">({</span><span class="n">criterion</span><span class="p">:</span> <span class="s">&quot;No category&quot;</span><span class="p">})</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;associated_to_nothing_by_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">criterion</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">info_non_connected</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">criterion</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>
+        <span class="n">report</span><span class="p">[</span><span class="s">&quot;most_associated_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">criterion</span><span class="p">)]</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">assoc_by_element</span><span class="p">),</span><span class="n">criterion</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">report</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

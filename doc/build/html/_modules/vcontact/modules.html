@@ -1,0 +1,429 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.modules &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.modules</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Modules are groups of protein families</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">pc_matrix</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="kn">as</span> <span class="nn">sparse</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pandas</span>
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">networkx</span>
+<span class="kn">import</span> <span class="nn">options</span>
+<span class="kn">from</span> <span class="nn">Bio</span> <span class="kn">import</span> <span class="n">SeqIO</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">combinations</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Modules"><a class="viewcode-back" href="../../vcontact.html#vcontact.modules.Modules">[docs]</a><span class="k">class</span> <span class="nc">Modules</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pcm</span><span class="p">,</span><span class="n">threshold</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pcm: PCMatrix object or a tuple:</span>
+<span class="sd">                 (features (df), contigs (df),</span>
+<span class="sd">                  pc similirity-network (sp.matrix), pc-profiles (sp.matrix)).</span>
+<span class="sd">            threshold: (int) Minimal sig value to take into account an edge.</span>
+<span class="sd">            name: (str) A name to identify the object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">thres</span> <span class="o">=</span> <span class="n">threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;mod_sig{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">threshold</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">name</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pcm</span><span class="p">,</span><span class="n">pc_matrix</span><span class="o">.</span><span class="n">PCMatrix</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">features</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">contigs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">ntw_modules</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">matrix</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="o">=</span> <span class="n">pcm</span>
+
+        <span class="c"># Filter the network according to the threshold:</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">thres</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s">&quot;Filtered {} edges according to the sig. threshold&quot;</span>
+                       <span class="s">&quot; {}.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">before</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">thres</span><span class="p">))</span>
+
+        <span class="c"># Define the modules</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">)</span>
+        <span class="c">#self.matrix_module = self.module_in_contigs()</span>
+        <span class="c">#self.link_modules_and_clusters</span>
+    
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s">&quot;Modules object {}, {} modules, (contigs, pc) : {},&quot;</span>
+                <span class="s">&quot;sig. threshold {} &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">),</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">thres</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Modules.define_modules"><a class="viewcode-back" href="../../vcontact.html#vcontact.modules.Modules.define_modules">[docs]</a>    <span class="k">def</span> <span class="nf">define_modules</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">matrix</span><span class="p">,</span><span class="n">I</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save the pc network in a file ready for MCL</span>
+<span class="sd">        Run MCL</span>
+<span class="sd">        Load clusters from the mcl results</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            matrix: (scipy.sparse matrix) network.</span>
+<span class="sd">            fi: (str) filename.</span>
+<span class="sd">            I: (float) Inflation for mcl.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dataframe containing:</span>
+<span class="sd">                name: the name of the module.</span>
+<span class="sd">                size: the number of protein clusters in the module.</span>
+<span class="sd">                pos: the position of the module in the matrix.</span>
+<span class="sd">                proteins: the number of proteins in the module.</span>
+<span class="sd">                annotated_proteins: the number of annotated proteins in the module.</span>
+
+<span class="sd">        Side-Effects:</span>
+<span class="sd">            self.features: Add the column &quot;module&quot;.</span>
+
+<span class="sd">        Saved Files:</span>
+<span class="sd">            name.ntwk: The pc similarity network.</span>
+<span class="sd">            name_mcl_I.clusters: mcl results.</span>
+<span class="sd">            name_mcl_I_modules.pandas: the module dataframe.</span>
+<span class="sd">            name_mcl_I_features.pandas: the pc dataframe.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">basename</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">folders</span><span class="p">[</span><span class="s">&quot;modules&quot;</span><span class="p">]</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">fi_in</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;.ntwk&quot;</span>
+        <span class="n">fi_out</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;_mcl_{}.clusters&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+        <span class="n">fi_dataframe</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;_mcl_{}_modules.pandas&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+        <span class="n">fi_feat</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;_mcl_{}_features.pandas&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+
+
+        <span class="c"># Save for MCL</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Exporting the pc-network for mcl&quot;</span><span class="p">)</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> 
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_in</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fi_in</span><span class="p">,</span><span class="s">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">matrix</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dok_matrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">r</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">matrix</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()):</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">r</span><span class="p">],</span>
+                                                       <span class="n">names</span><span class="p">[</span><span class="n">c</span><span class="p">],</span>
+                                                       <span class="n">matrix</span><span class="p">[</span><span class="n">r</span><span class="p">,</span><span class="n">c</span><span class="p">])]))</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s">&quot;Saving network in file {0}&quot;</span>
+                           <span class="s">&quot; ({1} lines)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fi_in</span><span class="p">,</span><span class="n">matrix</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Network file {} already exist.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fi_in</span><span class="p">))</span>
+
+        <span class="c"># Run MCL</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Clustering the pc similarity-network&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_out</span><span class="p">):</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">call</span><span class="p">((</span><span class="s">&quot;mcl {0} -o {1} --abc &quot;</span>
+                             <span class="s">&quot;-I {2}&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fi_in</span><span class="p">,</span><span class="n">fi_out</span><span class="p">,</span><span class="n">I</span><span class="p">),</span>
+                            <span class="n">shell</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;MCL({}) results are saved in {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">fi_out</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;MCL({}) file already exist.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">fi_out</span><span class="p">))</span>
+
+
+        <span class="c"># Read the mcl results</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Loading the clustering results&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_dataframe</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_feat</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fi_out</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+               <span class="n">c</span> <span class="o">=</span> <span class="p">[</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">]</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">c</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="c"># Drop singletons </span>
+            <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;module_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))]</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c</span><span class="p">]</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+            <span class="n">proteins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+            <span class="n">annotated_proteins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s">&quot;module&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">cluster</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="s">&quot;module&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+                    <span class="n">proteins</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="s">&quot;size&quot;</span><span class="p">]</span>
+                    <span class="n">annotated_proteins</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="s">&quot;annotated&quot;</span><span class="p">]</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;module&quot;</span><span class="p">],</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            
+            
+            <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;name&quot;</span><span class="p">:</span><span class="n">name</span><span class="p">,</span>
+                                          <span class="s">&quot;size&quot;</span><span class="p">:</span><span class="n">size</span><span class="p">,</span>
+                                          <span class="s">&quot;pos&quot;</span><span class="p">:</span><span class="n">pos</span><span class="p">,</span>
+                                          <span class="s">&quot;proteins&quot;</span><span class="p">:</span><span class="n">proteins</span><span class="p">,</span>
+                                          <span class="s">&quot;annotated_proteins&quot;</span><span class="p">:</span><span class="n">annotated_proteins</span><span class="p">})</span>
+            <span class="n">dataframe</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">fi_dataframe</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">fi_feat</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s">&quot;Saving {} modules containing {} &quot;</span>
+                          <span class="s">&quot; protein clusters in {}.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                                                             <span class="nb">sum</span><span class="p">(</span><span class="n">size</span><span class="p">),</span>
+                                                             <span class="n">fi_dataframe</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">fi_dataframe</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">fi_feat</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Read {} modules from {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataframe</span><span class="p">),</span>
+                                                            <span class="n">fi_dataframe</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dataframe</span>
+
+</div>
+<div class="viewcode-block" id="Modules.module_in_contigs"><a class="viewcode-back" href="../../vcontact.html#vcontact.modules.Modules.module_in_contigs">[docs]</a>    <span class="k">def</span> <span class="nf">module_in_contigs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">matrix</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">contigs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">modules</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the presence of modules in each contig</span>
+
+<span class="sd">        Input :</span>
+<span class="sd">            matrix: (scipy.sparse), M[contigs,pc] =  &quot;pc in contig&quot; (bool)</span>
+<span class="sd">            contigs: (pandas.DataFrame)</span>
+<span class="sd">            modules: (pandas.DataFrame) with columns : pos,</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            S: (matrix), S[contig,module] = proportions of module&#39;s pcs</span>
+<span class="sd">                present in contig (\in [0,1])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="k">if</span> <span class="n">matrix</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">matrix</span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="k">if</span> <span class="n">contigs</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">contigs</span>
+        <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span> <span class="k">if</span> <span class="n">modules</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">modules</span>
+
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+
+        <span class="c"># Number of pcs of module m in each contig.</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s">&quot;module&quot;</span><span class="p">):</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pos</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">N</span><span class="p">[:,</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">[:,</span><span class="n">pos</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c"># Number of pcs in each module</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">values</span><span class="p">]</span><span class="o">*</span><span class="n">N</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c"># Compute</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">N</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span><span class="o">/</span><span class="n">sizes</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">S</span>
+</div>
+<div class="viewcode-block" id="Modules.link_modules_and_clusters"><a class="viewcode-back" href="../../vcontact.html#vcontact.modules.Modules.link_modules_and_clusters">[docs]</a>    <span class="k">def</span> <span class="nf">link_modules_and_clusters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span>
+                                  <span class="n">matrix_modules</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                  <span class="n">modules</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">contigs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                  <span class="n">thres</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">own_threshold</span><span class="o">=</span><span class="mf">0.7</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Link the modules with the contigs clusters</span>
+<span class="sd">        using the hypergeometric formula.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            matrix_modules: (scipy.sparse)</span>
+<span class="sd">                bool(M[contig,module]&gt;=own_threshold): module is present in contig</span>
+<span class="sd">            modules: (pandas.DataFrame)</span>
+<span class="sd">            clusters: (pandas.DataFrame)</span>
+<span class="sd">            thres: (float) significativity threshold.</span>
+<span class="sd">            own_threshold: minimal proportion of PCs to &quot;own&quot; the module. </span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            S (scipy.sparse) S[module,cluster] = sig.</span>
+
+<span class="sd">        Formula:</span>
+<span class="sd">            P(X&gt;=c) ~ H(n,a,b)</span>
+<span class="sd">                c: number of contigs in cluster c owning module m.</span>
+<span class="sd">                n: number of contigs.</span>
+<span class="sd">                a: number of contigs in the cluster c.</span>
+<span class="sd">                b: number of contigs owning module m.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">matrix_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix_module</span> <span class="k">if</span> <span class="n">matrix_modules</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">matrix_modules</span>
+        <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span> <span class="k">if</span> <span class="n">modules</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">modules</span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="k">if</span> <span class="n">contigs</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">contigs</span>
+
+        <span class="c"># Filtering </span>
+        <span class="n">non_filtered</span> <span class="o">=</span> <span class="n">matrix_modules</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()</span>
+        <span class="n">matrix_modules</span> <span class="o">=</span> <span class="n">matrix_modules</span> <span class="o">&gt;=</span> <span class="n">own_threshold</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">((</span><span class="s">&quot;{} contigs-modules owning association, {} filtered &quot;</span>
+                      <span class="s">&quot;(a contig must have {:.0%} of the PCs to own a module).&quot;</span>
+                      <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matrix_modules</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(),</span>
+                               <span class="n">non_filtered</span><span class="o">-</span><span class="n">matrix_modules</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(),</span>
+                               <span class="n">own_threshold</span><span class="p">))</span>
+        
+        <span class="n">nb_contigs</span><span class="p">,</span><span class="n">nb_modules</span> <span class="o">=</span> <span class="n">matrix_modules</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">nb_clusters</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">clusters</span><span class="p">)</span>
+        <span class="n">matrix_module</span> <span class="o">=</span> <span class="n">matrix_modules</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">((</span><span class="s">&quot;Linking {} modules with &quot;</span>
+                      <span class="s">&quot;{} contigs clusters...&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nb_modules</span><span class="p">,</span>
+                                                        <span class="n">nb_clusters</span><span class="p">))</span>
+
+        <span class="c"># Phage in a given cluster</span>
+        <span class="n">a_values</span> <span class="o">=</span> <span class="n">clusters</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="c"># Phage displaying a given module</span>
+        <span class="n">b_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">matrix_modules</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">))))</span>
+
+
+        <span class="c"># contig in cluster</span>
+        <span class="n">xy</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ix</span><span class="p">[:,[</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">,</span><span class="s">&quot;pos&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">values</span>
+        <span class="k">print</span> <span class="n">xy</span>
+        <span class="n">pa_matrix</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">(</span> <span class="p">([</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">xy</span><span class="p">),</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">xy</span><span class="p">)</span> <span class="p">),</span>
+                                       <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">nb_clusters</span><span class="p">,</span><span class="n">nb_contigs</span><span class="p">)</span> <span class="p">)</span>
+
+
+        <span class="c"># Phage in a given cluster displaying a given module</span>
+        <span class="n">c_values</span> <span class="o">=</span> <span class="n">pa_matrix</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">matrix_modules</span><span class="p">)</span>
+
+        <span class="c"># Number of comparisons</span>
+        <span class="n">logT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">nb_clusters</span><span class="o">*</span><span class="n">nb_modules</span><span class="p">)</span>
+
+        <span class="c"># Number of actual comparisons</span>
+        <span class="n">total_c</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">c_values</span><span class="o">.</span><span class="n">getnnz</span><span class="p">())</span>
+
+        <span class="n">S</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">((</span><span class="n">nb_clusters</span><span class="p">,</span><span class="n">nb_modules</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">A</span><span class="p">,</span><span class="n">B</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">c_values</span><span class="o">.</span><span class="n">nonzero</span><span class="p">())</span> <span class="p">:</span>
+            <span class="c"># choose(a, k) * choose(C - a, b - k) / choose(C, b)</span>
+            <span class="c"># sf(k) = survival function = 1 -cdf(k) = 1 - P(x&lt;k) = P(x&gt;k)</span>
+            <span class="c"># sf(k-1)= P(x&gt;k-1) = P(x&gt;=k)</span>
+            <span class="n">pval</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">hypergeom</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">c_values</span><span class="p">[</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">nb_contigs</span><span class="p">,</span><span class="n">a_values</span><span class="p">[</span><span class="n">A</span><span class="p">],</span> <span class="n">b_values</span><span class="p">[</span><span class="n">B</span><span class="p">])</span>
+            <span class="n">sig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">pval</span><span class="p">)</span><span class="o">-</span><span class="n">logT</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sig</span><span class="o">&gt;</span><span class="n">thres</span><span class="p">:</span>
+                <span class="n">S</span><span class="p">[</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">]</span> <span class="o">=</span> <span class="n">sig</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Network done {0[0]} clusters, {0[1]} modules and {1} edges.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">S</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="n">S</span>
+</div>
+<div class="viewcode-block" id="Modules.link_modules_and_clusters_df"><a class="viewcode-back" href="../../vcontact.html#vcontact.modules.Modules.link_modules_and_clusters_df">[docs]</a>    <span class="k">def</span> <span class="nf">link_modules_and_clusters_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">clusters</span><span class="p">,</span><span class="n">modules</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">matrix_modules_and_clusters</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the dataframe giving the association between clusters and modules</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            clusters: (dataframe) informations about the clusters</span>
+<span class="sd">            matrix_modules_and_clusters: (sparse matrix) significativity of the associations</span>
+<span class="sd">            modules: (dataframe) information about the modules</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            A dataframe containing the position of the module, </span>
+<span class="sd">            of the cluster, the significativity of the association </span>
+<span class="sd">            and merged with the lines from modules and clusters.. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_modules_and_clusters</span><span class="p">(</span><span class="n">clusters</span><span class="p">)</span> <span class="k">if</span> <span class="n">matrix_modules_and_clusters</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">matrix_modules_and_clusters</span>
+        <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span> <span class="k">if</span> <span class="n">modules</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">modules</span>
+        
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">todok</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&#39;pos_module&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">matrix</span><span class="p">],</span>
+                                 <span class="s">&quot;pos_cluster&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">matrix</span><span class="p">],</span>
+                                 <span class="s">&quot;sig&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">matrix</span><span class="p">]})</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">modules</span><span class="p">,</span>
+                            <span class="n">left_on</span><span class="o">=</span><span class="s">&quot;pos_module&quot;</span><span class="p">,</span><span class="n">right_on</span><span class="o">=</span><span class="s">&quot;pos&quot;</span><span class="p">,</span>
+                            <span class="n">how</span><span class="o">=</span><span class="s">&quot;left&quot;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span>
+                            <span class="n">left_on</span><span class="o">=</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">,</span><span class="n">right_on</span><span class="o">=</span><span class="s">&quot;pos&quot;</span><span class="p">,</span>
+                            <span class="n">how</span><span class="o">=</span><span class="s">&quot;left&quot;</span><span class="p">,</span>
+                            <span class="n">suffixes</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;module&quot;</span><span class="p">,</span><span class="s">&quot;cluster&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">data</span>
+</div></div>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">def extract_modules(clusters,mod,keyword_matrix=None):</span>
+<span class="sd">    matrix =  mod.matrix_modules_and_clusters[clusters,:].todok().items()</span>
+<span class="sd">    pel_m_c = [x[0][0] for x in matrix]</span>
+<span class="sd">    pel_m_s = [x[1] for x in matrix]</span>
+<span class="sd">    pel_m = [x[0][1] for x in matrix]</span>
+
+<span class="sd">    data = {&#39;pos_module&#39;:pel_m,</span>
+<span class="sd">            &quot;pos_cluster&quot;:[],</span>
+<span class="sd">            &quot;sig&quot;:pel_m_s,</span>
+<span class="sd">            &quot;pcs&quot;:[],</span>
+<span class="sd">            &quot;proteins&quot;:[],</span>
+<span class="sd">            &quot;keys&quot;:[]}</span>
+
+<span class="sd">    for s,m,c in zip(pel_m_s,pel_m,pel_m_c):</span>
+<span class="sd">        data[&quot;pos_cluster&quot;].append(clusters[c])</span>
+<span class="sd">a = mod.features.query(&quot;module==m&quot;)</span>
+<span class="sd">        data[&quot;pcs&quot;].append(len(a))</span>
+<span class="sd">        data[&quot;proteins&quot;].append(a.size.sum())</span>
+<span class="sd">        if keyword_matrix != None:</span>
+<span class="sd">            count = keyword_matrix[:,a.pos.values].sum(1)</span>
+<span class="sd">            data[&quot;keys&quot;].append(&quot;, &quot;.join([&quot;{} ({})&quot;.format(k,int(count[n])) for n,k in enumerate(options.keywords) if count[n] ]))</span>
+<span class="sd">        else:</span>
+<span class="sd">            data[&quot;keys&quot;].append(None)</span>
+<span class="sd">    return pandas.DataFrame(data)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

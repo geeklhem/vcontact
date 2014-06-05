@@ -46,7 +46,7 @@ class GenomeCluster(object):
         self.thres = threshold
 
         if isinstance(pcm,pc_matrix.PCMatrix):
-            self.features = pcm.features.copy
+            self.features = pcm.features.copy()
             self.contigs = pcm.contigs.copy()
             self.network = pcm.ntw
         else:

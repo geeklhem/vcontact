@@ -1,0 +1,524 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.genome_clusters &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.genome_clusters</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Genome clusters : An object to work on the similarity network and</span>
+<span class="sd">make the affiliations&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="kn">as</span> <span class="nn">sparse</span>
+<span class="kn">import</span> <span class="nn">pandas</span>
+
+<span class="kn">import</span> <span class="nn">pc_matrix</span>
+<span class="kn">import</span> <span class="nn">options</span>
+<span class="kn">import</span> <span class="nn">matrices</span>
+<span class="kn">import</span> <span class="nn">ml_functions</span>
+<span class="kn">import</span> <span class="nn">associations</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GenomeCluster"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster">[docs]</a><span class="k">class</span> <span class="nc">GenomeCluster</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Deal with the clusters of the contig similarity network</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">            features: (pandas df) Protein clusters</span>
+<span class="sd">            contigs: (pandas df) Contigs &amp; Reference genomes</span>
+<span class="sd">            network: (sparse matrix) Contig similarity network</span>
+<span class="sd">            taxonomy: (pandas df) Taxonomic class</span>
+<span class="sd">            clusters: (pandas df) Contig clusters</span>
+<span class="sd">            mcl_results: (list of list) mcl_result[cluster][prot]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pcm</span><span class="p">,</span><span class="n">inflation</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">threshold</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">membership_simple</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init the object with a pc-profile object and perform the clustering</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pcm: PCMatrix object or a tuple</span>
+<span class="sd">                 (features (df), contigs (df), network (sparse matrix)).</span>
+<span class="sd">            inflation (float): inflation for mcl.</span>
+<span class="sd">            threshold (float): minimal significativity. </span>
+<span class="sd">            name (str): A name to identify the object.</span>
+<span class="sd">            membership_simple (bool): if false use non boolean membership. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;gc_sig{}_mcl{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">threshold</span><span class="p">,</span><span class="n">inflation</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inflation</span> <span class="o">=</span> <span class="n">inflation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thres</span> <span class="o">=</span> <span class="n">threshold</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pcm</span><span class="p">,</span><span class="n">pc_matrix</span><span class="o">.</span><span class="n">PCMatrix</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">copy</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">pcm</span><span class="o">.</span><span class="n">ntw</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">pcm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">pcm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">pcm</span><span class="o">.</span><span class="n">network</span>
+
+        <span class="k">if</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">thres</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s">&quot;Filtered {} edges according to the sig. threshold&quot;</span>
+                           <span class="s">&quot; {}.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">before</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">thres</span><span class="p">))</span>
+
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_taxonomy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">clusters</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">mcl_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clustering</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">data_folder</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">inflation</span><span class="p">)</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Computing membership matrix...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">membership_simple</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">bool_membership</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">membership</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mcl_results</span><span class="p">,</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="o">=</span> <span class="n">associations</span><span class="o">.</span><span class="n">contig_cluster</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;GenomeCluster object {}, {} contigs and {} clusters&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clusters</span><span class="p">))</span>
+
+    <span class="c">#--------------------------------------------------------------------------#</span>
+    <span class="c"># PART 1 : IMPORT, EXTRACTION, CLUSTERING</span>
+    <span class="c">#--------------------------------------------------------------------------#</span>
+<div class="viewcode-block" id="GenomeCluster.extract_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.extract_taxonomy">[docs]</a>    <span class="k">def</span> <span class="nf">extract_taxonomy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contigs</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">(</span><span class="s">&quot;family&quot;</span><span class="p">,</span><span class="s">&quot;genus&quot;</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot; Build the taxonomy dataframe.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            contigs (pandas.DataFrame): with colum &quot;level&quot; and &quot;pos&quot;. </span>
+<span class="sd">            levels (list): column name in contigs</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A dictionary of pandas.DataFrame, one key by taxonomic level.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="k">if</span> <span class="n">contigs</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">contigs</span>
+        <span class="n">tax</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
+            <span class="n">tax</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">contigs</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">pos</span><span class="o">.</span><span class="n">count</span><span class="p">(),</span>
+                                      <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;references&quot;</span><span class="p">])</span>
+            <span class="n">tax</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;name&quot;</span>
+            <span class="n">tax</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">tax</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="s">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tax</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+        <span class="k">return</span> <span class="n">tax</span>
+
+</div>
+<div class="viewcode-block" id="GenomeCluster.clustering"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.clustering">[docs]</a>    <span class="k">def</span> <span class="nf">clustering</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">basename</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Export the matrix, Run MCL and load the results</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            basename: (str) Path for the exported files</span>
+<span class="sd">            I: (float) inflation for mcl</span>
+<span class="sd">            force: (bool) overwrite existing file</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            See self.load_clusters.</span>
+
+<span class="sd">        Side-Effects:</span>
+<span class="sd">           Save basename.ntw the network file</span>
+<span class="sd">           Save basename.clusters the clustering results</span>
+<span class="sd">           self.contig: add &quot;cluster&quot; column</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">fi_ntw</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;.ntw&quot;</span>
+        <span class="n">fi_clusters</span> <span class="o">=</span> <span class="n">basename</span><span class="o">+</span><span class="s">&quot;.clusters&quot;</span>
+
+        <span class="c"># Export for MCL</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Exporting for MCL&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_ntw</span><span class="p">)</span> <span class="ow">or</span> <span class="n">force</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">to_mcl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span><span class="n">fi_ntw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Network file already exist.&quot;</span><span class="p">)</span>
+
+        <span class="c"># MCL</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Clustering the pc similarity-network&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fi_clusters</span> <span class="ow">or</span> <span class="n">force</span><span class="p">):</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">call</span><span class="p">((</span><span class="s">&quot;mcl {0} -o {1} --abc &quot;</span>
+                             <span class="s">&quot;-I {2}&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fi_ntw</span><span class="p">,</span><span class="n">fi_clusters</span><span class="p">,</span><span class="n">I</span><span class="p">),</span>
+                            <span class="n">shell</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;MCL({}) results are saved in {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">fi_clusters</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;MCL({}) file already exist.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">fi_clusters</span><span class="p">))</span>
+
+        <span class="c"># Load clusters</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_clusters</span><span class="p">(</span><span class="n">fi_clusters</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenomeCluster.to_mcl"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.to_mcl">[docs]</a>    <span class="k">def</span> <span class="nf">to_mcl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">matrix</span><span class="p">,</span><span class="n">fi</span><span class="p">,</span><span class="n">names</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save a network in a file ready for MCL</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            matrix (scipy.sparse_matrix): network.</span>
+<span class="sd">            fi (str): filename .</span>
+<span class="sd">            names (pandas.dataframe): with the columns</span>
+<span class="sd">                &quot;pos&quot;:  (int) is the position in the matrix.</span>
+<span class="sd">                &quot;name&quot;: (str) column contain the name of the node.</span>
+<span class="sd">                If None, self.contigs is used.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: filename</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="k">if</span> <span class="n">names</span> <span class="o">==</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">names</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="n">names</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fi</span><span class="p">,</span><span class="s">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dok_matrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">matrix</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">r</span><span class="p">],</span>
+                                                   <span class="n">names</span><span class="p">[</span><span class="n">c</span><span class="p">],</span>
+                                                   <span class="n">matrix</span><span class="p">[</span><span class="n">r</span><span class="p">,</span><span class="n">c</span><span class="p">])]))</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Saving network in file {0} ({1} lines).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fi</span><span class="p">,</span><span class="n">matrix</span><span class="o">.</span><span class="n">getnnz</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="n">fi</span>
+</div>
+<div class="viewcode-block" id="GenomeCluster.load_clusters"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.load_clusters">[docs]</a>    <span class="k">def</span> <span class="nf">load_clusters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load clusters from the mcl results</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            fi (str): path to the MCL result file.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            df (pandas.DataFrame): give for each contig cluster</span>
+<span class="sd">                its name, size and position in the matrix.</span>
+
+<span class="sd">        Side-Effect:</span>
+<span class="sd">            Modify self.contig to add the column &quot;pos_cluster&quot;</span>
+<span class="sd">            giving the pos of the cluster it belongs to.</span>
+
+<span class="sd">        The file fi was probably generated using :</span>
+<span class="sd">        &quot;mcl &lt;file&gt;.ntw --abc -I 2 -o &lt;file&gt;.clusters&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Read the files</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fi</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="p">[</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span> <span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">c</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;cluster_{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))]</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c</span><span class="p">]</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">((</span><span class="s">&quot;{} clusters loaded (singletons and non-connected nodes &quot;</span>
+                     <span class="s">&quot;are dropped).&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)))</span>
+
+        <span class="c"># Update self.contigs (To refactor)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">[</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">cluster</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;name&quot;</span><span class="p">:</span><span class="n">name</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="p">:</span><span class="n">size</span><span class="p">,</span><span class="s">&quot;pos&quot;</span><span class="p">:</span><span class="n">pos</span><span class="p">}),</span><span class="n">c</span>
+
+
+    <span class="c">#--------------------------------------------------------------------------#</span>
+    <span class="c"># PART 2: Affiliations</span>
+    <span class="c">#--------------------------------------------------------------------------#</span>
+
+    </div>
+<div class="viewcode-block" id="GenomeCluster.total_affiliation"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.total_affiliation">[docs]</a>    <span class="k">def</span> <span class="nf">total_affiliation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">levels</span><span class="o">=</span><span class="p">(</span><span class="s">&quot;family&quot;</span><span class="p">,</span><span class="s">&quot;genus&quot;</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot;Routine of the analysis using all the dataset.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            levels (tuple): Taxonomic levels to consider.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dataframe: Classification metrics. One line by taxonomic level.</span>
+
+<span class="sd">        Warning:</span>
+<span class="sd">            This function modify directly the attributes of the object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Affiliation at the {} level...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="c"># Taxonomic reference matrix</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;K&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">reference_membership</span><span class="p">(</span><span class="n">level</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">])</span>
+
+            <span class="c"># recall, precision and F-measure matrix</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;Q&quot;</span><span class="p">],</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;R&quot;</span><span class="p">],</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;P&quot;</span><span class="p">],</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;F&quot;</span><span class="p">])</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">correspondence</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;K&quot;</span><span class="p">],</span>
+                                                                <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+
+            <span class="c"># Associate clusters and taxonomic classes.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clusters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">]</span> <span class="o">=</span> <span class="n">associations</span><span class="o">.</span><span class="n">cluster_taxonomy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clusters</span><span class="p">,</span>
+                                                                                <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">],</span>
+                                                                                <span class="n">level</span><span class="p">,</span>
+                                                                                <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;P&quot;</span><span class="p">],</span>
+                                                                                <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="s">&quot;R&quot;</span><span class="p">])</span>
+            <span class="c"># Associate the contigs with the classes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span> <span class="o">=</span>  <span class="n">associations</span><span class="o">.</span><span class="n">contig_taxonomy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">],</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">clusters</span><span class="p">,</span>
+                                                         <span class="n">level</span><span class="p">)</span>
+
+            <span class="c"># Compute classification metrics.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Computing the classification metrics&quot;</span><span class="p">)</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ml_functions</span><span class="o">.</span><span class="n">classification_metrics</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,[</span><span class="n">level</span><span class="p">,</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]],</span>
+                                                               <span class="n">ref_col</span><span class="o">=</span><span class="n">level</span><span class="p">,</span>
+                                                               <span class="n">pred_col</span><span class="o">=</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">,</span><span class="n">levels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenomeCluster.cross_validation_affiliation"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.cross_validation_affiliation">[docs]</a>    <span class="k">def</span> <span class="nf">cross_validation_affiliation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="s">&quot;family&quot;</span><span class="p">,</span> <span class="n">folds</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Cross validation affiliation.</span>
+
+<span class="sd">        Cut the dataset (where a reference taxonomy exist) into &lt;fold&gt; equal parts</span>
+<span class="sd">        and use alternativly &lt;fold-2&gt; of them to do the affiliation. Compute the</span>
+<span class="sd">        classification metrics on the learning set and on the two remaining sets:</span>
+<span class="sd">        cross validation (used to select the model) and test (used to have an </span>
+<span class="sd">        unbiased estimate of the error of the classification.)</span>
+
+<span class="sd">        Note: </span>
+<span class="sd">            The splitting is stratified to keep the relative taxonomic classes in </span>
+<span class="sd">            the same proportions in each fold. </span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            level (str): Taxonomic level to consider.</span>
+<span class="sd">            folds (int): number of folds for the cross-validation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dict of dataframes, one entry by set (learning,cv,test). </span>
+<span class="sd">                In the dataframes are the classification metrics, one row by</span>
+<span class="sd">                selected cv-set. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;train_set&quot;</span><span class="p">:[],</span>
+                   <span class="s">&quot;cv_set&quot;</span><span class="p">:[],</span>
+                   <span class="s">&quot;test_set&quot;</span><span class="p">:[]}</span>
+        <span class="n">conditions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span>
+        <span class="n">taxonomy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
+        <span class="n">clusters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clusters</span>
+        
+        <span class="c"># Stratified split according to the taxonomic level. </span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="n">ml_functions</span><span class="o">.</span><span class="n">split_dataset</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span><span class="n">level</span><span class="p">,</span><span class="n">folds</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;{} folds cross-validation&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">folds</span><span class="p">))</span>
+        <span class="n">all_sets</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">folds</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">cv_set</span><span class="p">,</span><span class="n">test_set</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">folds</span><span class="p">),</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">folds</span><span class="p">)</span><span class="o">+</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">((</span><span class="s">&quot;Cross-validation fold {:2} &quot;</span>
+                         <span class="s">&quot;({:.0%})&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cv_set</span><span class="p">,</span><span class="n">cv_set</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">folds</span><span class="p">)))</span>
+
+            <span class="c"># Filtering conditions: </span>
+            <span class="n">train_set</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">all_sets</span> <span class="o">-</span> <span class="nb">frozenset</span><span class="p">([</span><span class="n">cv_set</span><span class="p">,</span><span class="n">test_set</span><span class="p">]))</span>
+            <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;cv_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;cvset_{}=={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">cv_set</span><span class="p">)</span>
+            <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;test_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;cvset_{}=={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">test_set</span><span class="p">)</span>
+            <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;train_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;cvset_{} in {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">train_set</span><span class="p">)</span>
+
+            <span class="c"># Affiliation: </span>
+            <span class="n">K</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">reference_membership</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">contigs</span><span class="p">,</span>
+                                              <span class="n">taxonomy</span><span class="p">,</span> <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;train_set&quot;</span><span class="p">])</span>
+            <span class="n">_</span><span class="p">,</span><span class="n">R</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span>  <span class="n">matrices</span><span class="o">.</span><span class="n">correspondence</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+            <span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">associations</span><span class="o">.</span><span class="n">cluster_taxonomy</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span>
+                                                               <span class="n">level</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+            <span class="n">contigs</span> <span class="o">=</span>  <span class="n">associations</span><span class="o">.</span><span class="n">contig_taxonomy</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span>
+                                                    <span class="n">level</span><span class="p">)</span>
+
+            <span class="c"># Computing metrics:</span>
+            <span class="k">for</span> <span class="n">set_</span> <span class="ow">in</span> <span class="n">conditions</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="n">set_</span><span class="p">])</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,[</span><span class="n">level</span><span class="p">,</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]]</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ml_functions</span><span class="o">.</span><span class="n">classification_metrics</span><span class="p">(</span><span class="n">df</span><span class="p">,</span>
+                                                                         <span class="n">ref_col</span><span class="o">=</span><span class="n">level</span><span class="p">,</span>
+                                                                         <span class="n">pred_col</span><span class="o">=</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">))</span>
+
+            <span class="c"># Cleaning the dataset for next step:</span>
+            <span class="n">contigs</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">,</span><span class="s">&quot;recall&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">clusters</span> <span class="o">=</span> <span class="n">clusters</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s">&quot;pos_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">,</span><span class="s">&quot;precision_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">set_</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">],[</span><span class="nb">range</span><span class="p">(</span><span class="n">folds</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">results</span>
+    
+
+
+</div>
+<div class="viewcode-block" id="GenomeCluster.learning_curve_affiliation"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.learning_curve_affiliation">[docs]</a>    <span class="k">def</span> <span class="nf">learning_curve_affiliation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="s">&quot;family&quot;</span><span class="p">,</span> <span class="n">folds</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Learning curve affiliation.</span>
+
+<span class="sd">        Cut the dataset (where a reference taxonomy exist) into &lt;fold&gt; equal parts</span>
+<span class="sd">        and increasingly one to &lt;fold-1&gt; of them to do the affiliation. Compute the</span>
+<span class="sd">        classification metrics on the learning set and on a randomly picked</span>
+<span class="sd">        cross validation set in the non used subset. </span>
+
+<span class="sd">        Note: </span>
+<span class="sd">            The splitting is stratified to keep the relative taxonomic classes in </span>
+<span class="sd">            the same proportions in each fold. </span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            levels (str): Taxonomic level to consider.</span>
+<span class="sd">            folds (int): number of folds for the cross-validation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dict of dict of dataframes, one entrie by level then one entry</span>
+<span class="sd">                by set (learning,cv). In the dataframes are the classification</span>
+<span class="sd">                metrics), one row by learning set size . </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;train_set&quot;</span><span class="p">:[],</span>
+                   <span class="s">&quot;cv_set&quot;</span><span class="p">:[]}</span>
+        <span class="n">conditions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contigs</span>
+        <span class="n">taxonomy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taxonomy</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
+        <span class="n">clusters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clusters</span>
+        
+        <span class="c"># Stratified split according to the taxonomic level. </span>
+        <span class="n">contigs</span> <span class="o">=</span> <span class="n">ml_functions</span><span class="o">.</span><span class="n">split_dataset</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span><span class="n">level</span><span class="p">,</span><span class="n">folds</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;{} folds cross-validation&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">folds</span><span class="p">))</span>
+ 
+
+        <span class="k">for</span> <span class="n">cv_set</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">folds</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">((</span><span class="s">&quot;Cross-validation set {:2} &quot;</span>
+                         <span class="s">&quot;({:.0%})&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cv_set</span><span class="p">,</span><span class="n">cv_set</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">folds</span><span class="p">)))</span>
+
+            <span class="n">remaining_sets</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">folds</span><span class="p">)</span>
+            <span class="n">remaining_sets</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">cv_set</span><span class="p">)</span>
+            <span class="n">train_sets</span> <span class="o">=</span> <span class="p">[[</span><span class="n">remaining_sets</span><span class="p">[</span><span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="p">)]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">folds</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">train_set</span> <span class="ow">in</span> <span class="n">train_sets</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Training set of size {:2}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="p">)))</span>
+
+                <span class="c"># Filtering conditions: </span>
+                <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;cv_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;cvset_{}=={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">cv_set</span><span class="p">)</span>
+                <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;train_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;cvset_{} in {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">train_set</span><span class="p">)</span>
+
+                <span class="c"># Affiliation: </span>
+                <span class="n">K</span> <span class="o">=</span> <span class="n">matrices</span><span class="o">.</span><span class="n">reference_membership</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">contigs</span><span class="p">,</span>
+                                                  <span class="n">taxonomy</span><span class="p">,</span> <span class="n">conditions</span><span class="p">[</span><span class="s">&quot;train_set&quot;</span><span class="p">])</span>
+                <span class="n">_</span><span class="p">,</span><span class="n">R</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span>  <span class="n">matrices</span><span class="o">.</span><span class="n">correspondence</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+                <span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">associations</span><span class="o">.</span><span class="n">cluster_taxonomy</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span>
+                                                                   <span class="n">level</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+                <span class="n">contigs</span> <span class="o">=</span>  <span class="n">associations</span><span class="o">.</span><span class="n">contig_taxonomy</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span>
+                                                        <span class="n">level</span><span class="p">)</span>
+
+                <span class="c"># Computing metrics:</span>
+                <span class="k">for</span> <span class="n">set_</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="n">set_</span><span class="p">])</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,[</span><span class="n">level</span><span class="p">,</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">]]</span>
+                    <span class="n">metrics</span> <span class="o">=</span> <span class="n">ml_functions</span><span class="o">.</span><span class="n">classification_metrics</span><span class="p">(</span><span class="n">df</span><span class="p">,</span>
+                                                                  <span class="n">ref_col</span><span class="o">=</span><span class="n">level</span><span class="p">,</span>
+                                                                  <span class="n">pred_col</span><span class="o">=</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">)</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s">&quot;train_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s">&quot;cv_set&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_set</span>
+                    <span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>
+
+                <span class="c"># Cleaning the dataset for next step:</span>
+                <span class="n">contigs</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s">&quot;predicted_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">,</span><span class="s">&quot;recall&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">clusters</span> <span class="o">=</span> <span class="n">clusters</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s">&quot;pos_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">,</span><span class="s">&quot;precision_&quot;</span><span class="o">+</span><span class="n">level</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">set_</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">set_</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">results</span>
+    
+
+    <span class="c">#--------------------------------------------------------------------------#</span>
+    <span class="c"># PART 4: Pickle-save</span>
+    <span class="c">#--------------------------------------------------------------------------#</span>
+
+</div>
+<div class="viewcode-block" id="GenomeCluster.to_pickle"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.GenomeCluster.to_pickle">[docs]</a>    <span class="k">def</span> <span class="nf">to_pickle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Pickle (serialize) object to file path.&quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;.pkle&quot;</span> <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">path</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="read_pickle"><a class="viewcode-back" href="../../vcontact.html#vcontact.genome_clusters.read_pickle">[docs]</a><span class="k">def</span> <span class="nf">read_pickle</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read pickled object in file path.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

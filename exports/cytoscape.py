@@ -1,4 +1,5 @@
-"""Export functions to use the data generated with others software."""
+"""Export functions to use the data generated with cytoscape.
+http://www.cytoscape.org/"""
 import logging
 from itertools import combinations
 import csv
@@ -11,7 +12,7 @@ import pandas
 
 logger = logging.getLogger(__name__)
 
-def cytoscape_contigs(network, contigs, clusters, path):
+def contigs(network, contigs, clusters, path):
     """ Export the network and node information in a format
     that can be used with cytoscape (tab files).
 
@@ -56,7 +57,7 @@ def cytoscape_contigs(network, contigs, clusters, path):
 
 
 
-def cytoscape_membership(B, contigs, clusters, clusters_list,
+def membership(B, contigs, clusters, clusters_list,
                          fi,criterion="predicted_family"):
     """Save the membership matrix in an input format for cytoscape (csv)
 
@@ -94,7 +95,7 @@ def cytoscape_membership(B, contigs, clusters, clusters_list,
     logger.debug("Wrote {} lines in {}".format(n,fi))
 
 
-def cytoscape_clusters(cluster_network,contigs,clusters,criterion,path):
+def clusters(cluster_network,contigs,clusters,criterion,path):
     """ Export the network and node information in a format
     that can be used with cytoscape (tab files).
 
@@ -235,7 +236,7 @@ def export_network(fi_ntw, network, dataframe,
     print("Wrote {} lines in {}.".format(line,fi_ntw))
 
 
-def cytoscape_membership(B, contigs, fi):
+def membership(B, contigs, fi):
     """Save the membership matrix in an input format for cytoscape (csv)
     INPUT:
     - genome_cluster (GenomesCluster) object
@@ -257,7 +258,7 @@ def cytoscape_membership(B, contigs, fi):
             f.write("\n")
 
 
-def cytoscape_network(network, dataframe, fi,
+def network(network, dataframe, fi,
                       pos=None, cluster=None,
                       col_cluster="mcl_cluster", col_pos="pos", col_name="name",
                       membership=None):

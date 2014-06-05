@@ -64,8 +64,8 @@ class PCMatrix(object):
 
 
     def __repr__(self):
-        return ("PC-profiles object {2}"
-                "{0[0]} contigs by {0[1]} shared protein clusters."
+        return ("PC-profiles object {2} "
+                "{0[0]} contigs by {0[1]} shared protein clusters "
                 "and {1} singletons.").format(self.matrix.shape,
                                               self.singletons.sum(),
                                               self.name)

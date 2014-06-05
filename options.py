@@ -1,6 +1,17 @@
 """General options"""
 import os
+import subprocess 
 import logging
+
+try:
+    version = subprocess.check_output(["git", "describe"]).strip()
+except (OSError, subprocess.CalledProcessError) as e:
+    try:
+        with open("VERSION") as f:
+            version = f.read()
+    except IOError:
+        version = "unknown version"
+        
 data_folder = os.path.expanduser("~/data/")
 
 cache_folder = data_folder+"cache/"
@@ -46,8 +57,3 @@ keywords =  ['ATPase', 'wedge', 'junction', 'assembly',  'activator',  'baseplat
 pelagiphages = ["NC_020481","NC_020482","NC_020483","NC_020484"]
 names = ["HTVC010P", "HTVC011P", "HTVC019P", "HTVC008M"]
 
-"""
-refseq_fi = {}
-files = {"refseq":refseq_fi, 
-         "tara":tara_fi}
-"""

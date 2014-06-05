@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.options &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.options</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;General options&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">data_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s">&quot;~/data/&quot;</span><span class="p">)</span>
+
+<span class="n">cache_folder</span> <span class="o">=</span> <span class="n">data_folder</span><span class="o">+</span><span class="s">&quot;cache/&quot;</span>
+
+<span class="n">colors</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;refseq&quot;</span><span class="p">:</span><span class="s">&quot;#B31B1B&quot;</span><span class="p">,</span>
+          <span class="s">&quot;tara&quot;</span><span class="p">:</span><span class="s">&quot;#32C6A6&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Myoviridae&quot;</span><span class="p">:</span> <span class="s">&quot;#4daf4a&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Siphoviridae&quot;</span> <span class="p">:</span><span class="s">&quot;#984ea3&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Podoviridae&quot;</span><span class="p">:</span><span class="s">&quot;#ff7f00&quot;</span><span class="p">,</span>
+          <span class="s">&quot;red&quot;</span><span class="p">:</span><span class="s">&quot;#e41a1c&quot;</span><span class="p">,</span>
+          <span class="s">&quot;blue&quot;</span><span class="p">:</span><span class="s">&quot;#377eb8&quot;</span><span class="p">,</span>
+          <span class="s">&quot;green&quot;</span><span class="p">:</span><span class="s">&quot;#4daf4a&quot;</span><span class="p">,</span>
+          <span class="s">&quot;violet&quot;</span><span class="p">:</span><span class="s">&quot;#984ea3&quot;</span><span class="p">,</span>
+          <span class="s">&quot;orange&quot;</span><span class="p">:</span><span class="s">&quot;#ff7f00&quot;</span><span class="p">,</span>
+          <span class="s">&quot;yellow&quot;</span><span class="p">:</span><span class="s">&quot;#ffff33&quot;</span><span class="p">,</span>
+          <span class="s">&quot;brown&quot;</span><span class="p">:</span><span class="s">&quot;#a65628&quot;</span><span class="p">,</span>
+          <span class="s">&quot;pink&quot;</span><span class="p">:</span><span class="s">&quot;#f781bf&quot;</span><span class="p">,</span>
+          <span class="s">&quot;grey&quot;</span><span class="p">:</span><span class="s">&quot;#999999&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Non affiliated&quot;</span><span class="p">:</span><span class="s">&quot;#999999&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Non-affiliated&quot;</span><span class="p">:</span><span class="s">&quot;#999999&quot;</span><span class="p">,</span>
+          <span class="s">&quot;Inoviridae&quot;</span><span class="p">:</span><span class="s">&quot;#f781bf&quot;</span><span class="p">,}</span>
+
+
+<span class="n">folders</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;cache&quot;</span><span class="p">,</span><span class="s">&quot;proteins&quot;</span><span class="p">,</span><span class="s">&quot;contigs&quot;</span><span class="p">,</span><span class="s">&quot;log&quot;</span><span class="p">,</span><span class="s">&quot;results&quot;</span><span class="p">,</span><span class="s">&quot;modules&quot;</span><span class="p">):</span>
+    <span class="n">folders</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_folder</span><span class="o">+</span><span class="n">f</span><span class="o">+</span><span class="s">&quot;/&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">folders</span><span class="p">[</span><span class="n">f</span><span class="p">]):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">folders</span><span class="p">[</span><span class="n">f</span><span class="p">])</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Created {}/ directory into {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="n">data_folder</span><span class="p">))</span>
+        
+<span class="n">contig_name_regex</span> <span class="o">=</span> <span class="s">&#39;([NY][CP]_[0-9]*|^[0-9]{2,3}[A-Z]{3}[0-9_]*)&#39;</span>
+
+<span class="n">overwrite</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="n">refseq_faa</span> <span class="o">=</span> <span class="n">data_folder</span><span class="o">+</span><span class="s">&quot;refseq/phage.protein.faa&quot;</span>
+
+<span class="c"># Blast options </span>
+<span class="n">blast_cmd</span> <span class="o">=</span> <span class="s">&quot;blastall -p blastp  -m 8 -a 24 -e 0.00001&quot;</span>
+
+
+<span class="n">keywords</span> <span class="o">=</span>  <span class="p">[</span><span class="s">&#39;ATPase&#39;</span><span class="p">,</span> <span class="s">&#39;wedge&#39;</span><span class="p">,</span> <span class="s">&#39;junction&#39;</span><span class="p">,</span> <span class="s">&#39;assembly&#39;</span><span class="p">,</span>  <span class="s">&#39;activator&#39;</span><span class="p">,</span>  <span class="s">&#39;baseplate&#39;</span><span class="p">,</span>  <span class="s">&#39;capsid&#39;</span><span class="p">,</span>  <span class="s">&#39;chaperone&#39;</span><span class="p">,</span>  <span class="s">&#39;diphosphate&#39;</span><span class="p">,</span>  <span class="s">&#39;endonuclease&#39;</span><span class="p">,</span>  <span class="s">&#39;exonuclease&#39;</span><span class="p">,</span>  <span class="s">&#39;fiber&#39;</span><span class="p">,</span>  <span class="s">&#39;head&#39;</span><span class="p">,</span>  <span class="s">&#39;helicase&#39;</span><span class="p">,</span>  <span class="s">&#39;helix&#39;</span><span class="p">,</span>  <span class="s">&#39;homing&#39;</span><span class="p">,</span>  <span class="s">&#39;hydrolase&#39;</span><span class="p">,</span>  <span class="s">&#39;inhibitor&#39;</span><span class="p">,</span>  <span class="s">&#39;injection&#39;</span><span class="p">,</span>  <span class="s">&#39;integrase&#39;</span><span class="p">,</span>  <span class="s">&#39;kinase&#39;</span><span class="p">,</span>  <span class="s">&#39;ligase&#39;</span><span class="p">,</span>  <span class="s">&#39;lysis&#39;</span><span class="p">,</span>  <span class="s">&#39;lysozyme&#39;</span><span class="p">,</span>  <span class="s">&#39;membrane&#39;</span><span class="p">,</span>  <span class="s">&#39;methylase&#39;</span><span class="p">,</span>  <span class="s">&#39;methyltransferase&#39;</span><span class="p">,</span>  <span class="s">&#39;neck&#39;</span><span class="p">,</span>  <span class="s">&#39;nuclease&#39;</span><span class="p">,</span>  <span class="s">&#39;polymerase&#39;</span><span class="p">,</span>  <span class="s">&#39;portal&#39;</span><span class="p">,</span>  <span class="s">&#39;plate&#39;</span><span class="p">,</span>  <span class="s">&#39;scaffold&#39;</span><span class="p">,</span>  <span class="s">&#39;primase&#39;</span><span class="p">,</span>  <span class="s">&#39;prohead&#39;</span><span class="p">,</span>  <span class="s">&#39;protease&#39;</span><span class="p">,</span>  <span class="s">&#39;recombination&#39;</span><span class="p">,</span>  <span class="s">&#39;recombinase&#39;</span><span class="p">,</span>  <span class="s">&#39;transposase&#39;</span><span class="p">,</span>  <span class="s">&#39;reductase&#39;</span><span class="p">,</span>  <span class="s">&#39;repair&#39;</span><span class="p">,</span>  <span class="s">&#39;regulator&#39;</span><span class="p">,</span>  <span class="s">&#39;replication&#39;</span><span class="p">,</span>  <span class="s">&#39;repressor&#39;</span><span class="p">,</span>  <span class="s">&#39;ribonucleoside&#39;</span><span class="p">,</span>  <span class="s">&#39;ribonucleotide&#39;</span><span class="p">,</span>  <span class="s">&#39;structural&#39;</span><span class="p">,</span>  <span class="s">&#39;synthase&#39;</span><span class="p">,</span>  <span class="s">&#39;tail&#39;</span><span class="p">,</span>  <span class="s">&#39;tube&#39;</span><span class="p">,</span>  <span class="s">&#39;tRNA&#39;</span><span class="p">,</span>  <span class="s">&#39;terminase&#39;</span><span class="p">,</span>  <span class="s">&#39;transcription&#39;</span><span class="p">,</span>  <span class="s">&#39;transcriptional&#39;</span><span class="p">,</span>  <span class="s">&#39;transferase&#39;</span><span class="p">,</span>  <span class="s">&#39;virion&#39;</span><span class="p">]</span>
+
+<span class="n">pelagiphages</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;NC_020481&quot;</span><span class="p">,</span><span class="s">&quot;NC_020482&quot;</span><span class="p">,</span><span class="s">&quot;NC_020483&quot;</span><span class="p">,</span><span class="s">&quot;NC_020484&quot;</span><span class="p">]</span>
+<span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;HTVC010P&quot;</span><span class="p">,</span> <span class="s">&quot;HTVC011P&quot;</span><span class="p">,</span> <span class="s">&quot;HTVC019P&quot;</span><span class="p">,</span> <span class="s">&quot;HTVC008M&quot;</span><span class="p">]</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">refseq_fi = {}</span>
+<span class="sd">files = {&quot;refseq&quot;:refseq_fi, </span>
+<span class="sd">         &quot;tara&quot;:tara_fi}</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

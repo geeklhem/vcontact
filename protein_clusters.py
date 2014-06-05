@@ -28,7 +28,11 @@ class ProteinClusters(object):
             cluster_fi (str): path to clusters file
             keys (bool): parse the functions of the proteins in each cluster.
         """
+        self.fi = clusters_fi
         self.data,self.key_matrix = self.load_clusters(clusters_fi,keys)
+
+    def __repr__(self):
+        return "Protein clusters extracted from {}.".format(os.path.basename(self.fi))
 
     def __len__(self):
         return len(self.data.clusters)
@@ -62,16 +66,17 @@ class ProteinClusters(object):
         dataframe_prot = dataframe_prot.query("anotated==True")
         lenanot = float(len(dataframe_prot))
         
-        print "{} annotated proteins".format(lenanot)
+        logger.info("{} annotated proteins".format(lenanot))
 
         h5_name = ''.join(os.path.basename(fi).split(".")[:-1])+".h5"
-        keyfile = ''.join(os.path.basename(fi).split(".")[:-1])+"_keywords.pkle"
+        keyfile = options.cache_folder+''.join(os.path.basename(fi).split(".")[:-1])+"_keywords.pkle"
         store =  pandas.HDFStore(options.cache_folder+h5_name)
-        keywords = pandas.DataFrame({"pos":range(len(options.keywords)),"keyword":options.keywords})
-        key_count = np.zeros(len(options.keywords))
-        queries = zip(keywords.pos,keywords.keyword)
         
-        if "proteins" not in store or "clusters" not in store:  
+        if "proteins" not in store or "clusters" not in store or (keys and not os.path.exists(keyfile)):
+            keywords = pandas.DataFrame({"pos":range(len(options.keywords)),"keyword":options.keywords})
+            key_count = np.zeros(len(options.keywords))
+            queries = zip(keywords.pos,keywords.keyword)
+         
             proteins = {"protein_id":[],
                         "cluster":[]}
             clusters = {"size":[],
@@ -96,7 +101,7 @@ class ProteinClusters(object):
                         try :
                             proteins["protein_id"] += [pid(prot) for prot in l]
                         except AttributeError as e:
-                            print prot
+                            logger.error(prot)
                             raise
 
                         if keys:
@@ -104,11 +109,11 @@ class ProteinClusters(object):
                             for prot in l:
                                 jjj +=1
                                 if jjj%1000==0:
-                                    print "{:.1%}, {:7}/582865 ({:.2%} of the anotated) | cluster {:6}/{:6}".format(jjj/582865.,
+                                    logger.debug("{:.1%}, {:7}/582865 ({:.2%} of the anotated) | cluster {:6}/{:6}".format(jjj/582865.,
                                                                                                                     jjj,
                                                                                                                     jj/lenanot,
                                                                                                                     C,
-                                                                                                                    nb_clusters)
+                                                                                                                    nb_clusters))
                                 if pid(prot) in dataframe_prot.index:
                                     jj +=1
                                     func = str(g.data.proteins.ix[pid(prot),"function"])
@@ -120,7 +125,7 @@ class ProteinClusters(object):
             if keys:
                 with open(keyfile,"w") as f:
                     pickle.dump(key_matrix,f)
-                    print("{} proteins, {} annotated.".format(jjj,jj,np.sum(clusters["annotated"])))
+                    logger.info("{} proteins, {} annotated.".format(jjj,jj,np.sum(clusters["annotated"])))
                     keywords["count"] = key_count 
                     store.append("keywords",keywords,format="table")
                     
@@ -132,5 +137,6 @@ class ProteinClusters(object):
                     key_matrix = pickle.load(f)
             except Exception:
                 key_matrix = None
+                logger.debug("No keyword matrix found")
         return store,key_matrix
 

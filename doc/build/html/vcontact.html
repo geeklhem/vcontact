@@ -1,0 +1,1352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact package &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">vcontact beta documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="vcontact-package">
+<h1>vcontact package<a class="headerlink" href="#vcontact-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="vcontact.test.html">vcontact.test package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_exports">vcontact.test.test_exports module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#vcontact-test-test-featureselect-module">vcontact.test.test_featureselect module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_genomes_clusters">vcontact.test.test_genomes_clusters module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_ml">vcontact.test.test_ml module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_pc_matrix">vcontact.test.test_pc_matrix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="vcontact-associations-module">
+<h2>vcontact.associations module<a class="headerlink" href="#vcontact-associations-module" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-vcontact.associations"></span><p>Functions to build the associations between the objects from the matrices.</p>
+<dl class="function">
+<dt id="vcontact.associations.cluster_taxonomy">
+<tt class="descclassname">vcontact.associations.</tt><tt class="descname">cluster_taxonomy</tt><big>(</big><em>clusters</em>, <em>taxonomy</em>, <em>level</em>, <em>P</em>, <em>R</em><big>)</big><a class="reference internal" href="_modules/vcontact/associations.html#cluster_taxonomy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.associations.cluster_taxonomy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the associations to the cluster and taxonomy dataframes.
+Using the maximum of precision taxonomic class of each cluster
+and the maximum of recall cluster of each taxonomic class.
+If this maximum is null, the position is set to NaN.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>clusters</strong> (<em>dataframe</em>) &#8211; to modify</li>
+<li><strong>taxonomy</strong> (<em>dataframe</em>) &#8211; to modify</li>
+<li><strong>level</strong> (<em>str</em>) &#8211; taxonomic level of P &amp; R</li>
+<li><strong>P</strong> (<em>sparse_matrix</em>) &#8211; Precision matrix (cluster X taxonomic class)</li>
+<li><strong>R</strong> (<em>sparse_matrix</em>) &#8211; Recall matrix  (cluster X taxonomic class)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">clusters with added columns &#8220;pos_level&#8221; and &#8220;precision_level&#8221;
+dataframe: taxonomy with added columns &#8220;pos_cluster&#8221; and &#8220;recall&#8221;</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.associations.contig_cluster">
+<tt class="descclassname">vcontact.associations.</tt><tt class="descname">contig_cluster</tt><big>(</big><em>contigs</em>, <em>B</em><big>)</big><a class="reference internal" href="_modules/vcontact/associations.html#contig_cluster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.associations.contig_cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Associate each contig with its maximal-membership cluster.
+If the maximal-membership is null, the mbship cluster position
+is set to NaN.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; the contigs, with:
+pos: the position of the contig in the matrix.</li>
+<li><strong>B</strong> (<em>sparse_matrix</em>) &#8211; Membership matrix</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">contigs with pos_cluster_mbship column added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.associations.contig_taxonomy">
+<tt class="descclassname">vcontact.associations.</tt><tt class="descname">contig_taxonomy</tt><big>(</big><em>contigs</em>, <em>taxonomy</em>, <em>clusters</em>, <em>level</em>, <em>cluster_choice='pos_cluster_mbship'</em><big>)</big><a class="reference internal" href="_modules/vcontact/associations.html#contig_taxonomy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.associations.contig_taxonomy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Associate each contig with its predicted taxonomic class</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; the contigs, with a &#8220;cluster_choice&#8221; column.</li>
+<li><strong>taxonomy</strong> (<em>dataframe</em>) &#8211; names of the taxonomic classes at this level.</li>
+<li><strong>level</strong> (<em>str</em>) &#8211; taxonomic level</li>
+<li><strong>clustering_choice</strong> (<em>str</em>) &#8211; column in which the cluster of a contig
+can be found.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">contigs with &#8220;predicted_level&#8221; column added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="vcontact-cache-module">
+<h2>vcontact.cache module<a class="headerlink" href="#vcontact-cache-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-vcontact.exports">
+<span id="vcontact-exports-module"></span><h2>vcontact.exports module<a class="headerlink" href="#module-vcontact.exports" title="Permalink to this headline">¶</a></h2>
+<p>Export functions to use the data generated with others software.</p>
+<dl class="function">
+<dt id="vcontact.exports.cytoscape_contigs">
+<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_contigs</tt><big>(</big><em>network</em>, <em>contigs</em>, <em>clusters</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_contigs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_contigs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the network and node information in a format
+that can be used with cytoscape (tab files).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>network</strong> (<em>sparse-matrix</em>) &#8211; Similarity network.</li>
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
+<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Output:</dt>
+<dd><dl class="first last docutils">
+<dt>tuple: Tuple of the path to the edge files and</dt>
+<dd>nodes information files</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.exports.cytoscape_membership">
+<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_membership</tt><big>(</big><em>B</em>, <em>contigs</em>, <em>clusters</em>, <em>clusters_list</em>, <em>fi</em>, <em>criterion='predicted_family'</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_membership" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the membership matrix in an input format for cytoscape (csv)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.exports.cytoscape_clusters">
+<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_clusters</tt><big>(</big><em>cluster_network</em>, <em>contigs</em>, <em>clusters</em>, <em>criterion</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the network and node information in a format
+that can be used with cytoscape (tab files).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cluster_network</strong> (<em>sparse-matrix</em>) &#8211; cluster network.</li>
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
+<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Output:</dt>
+<dd><dl class="first last docutils">
+<dt>tuple: Tuple of the path to the edge files and</dt>
+<dd>nodes information files</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="vcontact-feature-select-module">
+<h2>vcontact.feature_select module<a class="headerlink" href="#vcontact-feature-select-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-vcontact.genome_clusters">
+<span id="vcontact-genome-clusters-module"></span><h2>vcontact.genome_clusters module<a class="headerlink" href="#module-vcontact.genome_clusters" title="Permalink to this headline">¶</a></h2>
+<p>Genome clusters : An object to work on the similarity network and
+make the affiliations</p>
+<dl class="class">
+<dt id="vcontact.genome_clusters.GenomeCluster">
+<em class="property">class </em><tt class="descclassname">vcontact.genome_clusters.</tt><tt class="descname">GenomeCluster</tt><big>(</big><em>pcm</em>, <em>inflation=2</em>, <em>threshold=None</em>, <em>name=None</em>, <em>membership_simple=False</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Deal with the clusters of the contig similarity network</p>
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.features">
+<tt class="descname">features</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.features" title="Permalink to this definition">¶</a></dt>
+<dd><p>(pandas df) Protein clusters</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.contigs">
+<tt class="descname">contigs</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.contigs" title="Permalink to this definition">¶</a></dt>
+<dd><p>(pandas df) Contigs &amp; Reference genomes</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.network">
+<tt class="descname">network</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.network" title="Permalink to this definition">¶</a></dt>
+<dd><p>(sparse matrix) Contig similarity network</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.taxonomy">
+<tt class="descname">taxonomy</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.taxonomy" title="Permalink to this definition">¶</a></dt>
+<dd><p>(pandas df) Taxonomic class</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.clusters">
+<tt class="descname">clusters</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>(pandas df) Contig clusters</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.genome_clusters.GenomeCluster.mcl_results">
+<tt class="descname">mcl_results</tt><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.mcl_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>(list of list) mcl_result[cluster][prot]</p>
+</dd></dl>
+
+<p>Init the object with a pc-profile object and perform the clustering</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>pcm</strong> &#8211; PCMatrix object or a tuple
+(features (df), contigs (df), network (sparse matrix)).</li>
+<li><strong>inflation</strong> (<em>float</em>) &#8211; inflation for mcl.</li>
+<li><strong>threshold</strong> (<em>float</em>) &#8211; minimal significativity.</li>
+<li><strong>name</strong> (<em>str</em>) &#8211; A name to identify the object.</li>
+<li><strong>membership_simple</strong> (<em>bool</em>) &#8211; if false use non boolean membership.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.extract_taxonomy">
+<tt class="descname">extract_taxonomy</tt><big>(</big><em>contigs</em>, <em>levels=('family'</em>, <em>'genus')</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.extract_taxonomy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.extract_taxonomy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the taxonomy dataframe.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>contigs</strong> (<em>pandas.DataFrame</em>) &#8211; with colum &#8220;level&#8221; and &#8220;pos&#8221;.</li>
+<li><strong>levels</strong> (<em>list</em>) &#8211; column name in contigs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A dictionary of pandas.DataFrame, one key by taxonomic level.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.clustering">
+<tt class="descname">clustering</tt><big>(</big><em>basename</em>, <em>I</em>, <em>force=False</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.clustering"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.clustering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the matrix, Run MCL and load the results</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>basename</strong> &#8211; (str) Path for the exported files</li>
+<li><strong>I</strong> &#8211; (float) inflation for mcl</li>
+<li><strong>force</strong> &#8211; (bool) overwrite existing file</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">See self.load_clusters.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Side-Effects:</dt>
+<dd>Save basename.ntw the network file
+Save basename.clusters the clustering results
+self.contig: add &#8220;cluster&#8221; column</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.to_mcl">
+<tt class="descname">to_mcl</tt><big>(</big><em>matrix</em>, <em>fi</em>, <em>names=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.to_mcl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.to_mcl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a network in a file ready for MCL</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>scipy.sparse_matrix</em>) &#8211; network.</li>
+<li><strong>fi</strong> (<em>str</em>) &#8211; filename .</li>
+<li><strong>names</strong> (<em>pandas.dataframe</em>) &#8211; with the columns
+&#8220;pos&#8221;:  (int) is the position in the matrix.
+&#8220;name&#8221;: (str) column contain the name of the node.
+If None, self.contigs is used.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">filename</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">str</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.load_clusters">
+<tt class="descname">load_clusters</tt><big>(</big><em>fi</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.load_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.load_clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load clusters from the mcl results</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fi</strong> (<em>str</em>) &#8211; path to the MCL result file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>df</strong> &#8211;
+give for each contig cluster<blockquote>
+<div>its name, size and position in the matrix.</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Side-Effect:</dt>
+<dd>Modify self.contig to add the column &#8220;pos_cluster&#8221;
+giving the pos of the cluster it belongs to.</dd>
+</dl>
+<p>The file fi was probably generated using :
+&#8220;mcl &lt;file&gt;.ntw &#8211;abc -I 2 -o &lt;file&gt;.clusters&#8221;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.total_affiliation">
+<tt class="descname">total_affiliation</tt><big>(</big><em>levels=('family'</em>, <em>'genus')</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.total_affiliation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.total_affiliation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Routine of the analysis using all the dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>levels</strong> (<em>tuple</em>) &#8211; Taxonomic levels to consider.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Classification metrics. One line by taxonomic level.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dataframe</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This function modify directly the attributes of the object.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.cross_validation_affiliation">
+<tt class="descname">cross_validation_affiliation</tt><big>(</big><em>level='family'</em>, <em>folds=10</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.cross_validation_affiliation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.cross_validation_affiliation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cross validation affiliation.</p>
+<p>Cut the dataset (where a reference taxonomy exist) into &lt;fold&gt; equal parts
+and use alternativly &lt;fold-2&gt; of them to do the affiliation. Compute the
+classification metrics on the learning set and on the two remaining sets:
+cross validation (used to select the model) and test (used to have an
+unbiased estimate of the error of the classification.)</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The splitting is stratified to keep the relative taxonomic classes in
+the same proportions in each fold.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>level</strong> (<em>str</em>) &#8211; Taxonomic level to consider.</li>
+<li><strong>folds</strong> (<em>int</em>) &#8211; number of folds for the cross-validation.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dict of dataframes, one entry by set (learning,cv,test).
+In the dataframes are the classification metrics, one row by
+selected cv-set.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.learning_curve_affiliation">
+<tt class="descname">learning_curve_affiliation</tt><big>(</big><em>level='family'</em>, <em>folds=10</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.learning_curve_affiliation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.learning_curve_affiliation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Learning curve affiliation.</p>
+<p>Cut the dataset (where a reference taxonomy exist) into &lt;fold&gt; equal parts
+and increasingly one to &lt;fold-1&gt; of them to do the affiliation. Compute the
+classification metrics on the learning set and on a randomly picked
+cross validation set in the non used subset.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The splitting is stratified to keep the relative taxonomic classes in
+the same proportions in each fold.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>levels</strong> (<em>str</em>) &#8211; Taxonomic level to consider.</li>
+<li><strong>folds</strong> (<em>int</em>) &#8211; number of folds for the cross-validation.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dict of dict of dataframes, one entrie by level then one entry
+by set (learning,cv). In the dataframes are the classification
+metrics), one row by learning set size .</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genome_clusters.GenomeCluster.to_pickle">
+<tt class="descname">to_pickle</tt><big>(</big><em>path=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#GenomeCluster.to_pickle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.GenomeCluster.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pickle (serialize) object to file path.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.genome_clusters.read_pickle">
+<tt class="descclassname">vcontact.genome_clusters.</tt><tt class="descname">read_pickle</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/genome_clusters.html#read_pickle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genome_clusters.read_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read pickled object in file path.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.genomes">
+<span id="vcontact-genomes-module"></span><h2>vcontact.genomes module<a class="headerlink" href="#module-vcontact.genomes" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="vcontact.genomes.Genomes">
+<em class="property">class </em><tt class="descclassname">vcontact.genomes.</tt><tt class="descname">Genomes</tt><big>(</big><em>refseq=True</em>, <em>tara=False</em>, <em>refseq_contigs=False</em><big>)</big><a class="reference internal" href="_modules/vcontact/genomes.html#Genomes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genomes.Genomes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Data about reference genomes, object built from the refseq gbff file.</p>
+<p>Initialise the object with the required data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>refseq</strong> (<em>bool</em>) &#8211; Load the refseq sequences stored in
+options.files[&#8220;refseq&#8221;][&#8220;fasta&#8221;] and options.files[&#8220;refseq&#8221;][&#8220;fasta&#8221;]</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="vcontact.genomes.Genomes.load_tara">
+<tt class="descname">load_tara</tt><big>(</big><em>h5_name='tara.h5'</em>, <em>fi_faa=None</em>, <em>fi_fna=None</em>, <em>fi_meta=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/genomes.html#Genomes.load_tara"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genomes.Genomes.load_tara" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load TARA metadata</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genomes.Genomes.load_refseq">
+<tt class="descname">load_refseq</tt><big>(</big><em>fi=None</em>, <em>fi_taxa=None</em>, <em>contig_id_eq_prot_id=True</em>, <em>h5_name='refseq.h5'</em><big>)</big><a class="reference internal" href="_modules/vcontact/genomes.html#Genomes.load_refseq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genomes.Genomes.load_refseq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the refseq genomes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fi</strong> (<em>str</em>) &#8211; a genebak file.</li>
+<li><strong>fi_taxt</strong> (<em>str</em>) &#8211; a pickled pandas dataframe with the taxonomy information.</li>
+<li><strong>h5_name</strong> (<em>str</em>) &#8211; path to the cache file to save.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">pandas.HDF5Store: With contigs and proteins dataframe.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.genomes.Genomes.load_contigs_refseq">
+<tt class="descname">load_contigs_refseq</tt><big>(</big><em>fi=None</em>, <em>fi_taxa=None</em>, <em>h5_name='refseq_contigs.h5'</em><big>)</big><a class="reference internal" href="_modules/vcontact/genomes.html#Genomes.load_contigs_refseq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genomes.Genomes.load_contigs_refseq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load contigs from refseq
+:param fi: a genebak file.
+:type fi: str
+:param fi_taxt: a pickled pandas dataframe with the taxonomy information.
+:type fi_taxt: str
+:param h5_name: path to the cache file to save.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">pandas.HDF5Store: With contigs and proteins dataframe.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.genomes.pid">
+<tt class="descclassname">vcontact.genomes.</tt><tt class="descname">pid</tt><big>(</big><em>prot</em><big>)</big><a class="reference internal" href="_modules/vcontact/genomes.html#pid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.genomes.pid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="vcontact-main-module">
+<h2>vcontact.main module<a class="headerlink" href="#vcontact-main-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-vcontact.matrices">
+<span id="vcontact-matrices-module"></span><h2>vcontact.matrices module<a class="headerlink" href="#module-vcontact.matrices" title="Permalink to this headline">¶</a></h2>
+<p>Matrices used to compare the reference taxonomy with the clustering results.</p>
+<dl class="docutils">
+<dt>B: Membership matrix.</dt>
+<dd>B[g,c]: proportion of edges weight linking node g to nodes in c.</dd>
+<dt>K: Reference membership matrix.</dt>
+<dd>K[g,t]: (bool) node g belongs to taxonomic class t.</dd>
+<dt>Q: Correspondance matrix.</dt>
+<dd>Q[c,t]: Sum for the sequence of class t of the membership to the clusters c.</dd>
+<dt>R: Recall matrix.</dt>
+<dd>R[c,t]: Proportion of (Q affiliated to t) that belongs to c.</dd>
+<dt>P: Precision matrix.</dt>
+<dd>P[c,t]: Proportion of (Q in cluster c) that is affiliated to t.</dd>
+<dt>F: F-measure matrix.</dt>
+<dd>F[c,t]: (2PR)/(P+R)</dd>
+</dl>
+<dl class="function">
+<dt id="vcontact.matrices.membership">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">membership</tt><big>(</big><em>mcl_results</em>, <em>network</em>, <em>nodes</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.membership" title="Permalink to this definition">¶</a></dt>
+<dd><p>Membership matrix of the node to the clusters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mcl_results</strong> &#8211; (list of list) a list of nodes name by cluster.
+Extracted from the lines of the mcl output.</li>
+<li><strong>network</strong> &#8211; (sparse matrix) similarity network.</li>
+<li><strong>nodes</strong> &#8211; (dataframe) with a column &#8220;name&#8221; corresponding to the
+entries in mcl_results and a column &#8220;pos&#8221; corresponding to
+the position in the matrix.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">B, Membership matrix #node X #clusters,
+B(g,c) is the proportion of edges weight linking the
+node g to the cluster C</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sparse_matrix</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.matrices.bool_membership">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">bool_membership</tt><big>(</big><em>contigs</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#bool_membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.bool_membership" title="Permalink to this definition">¶</a></dt>
+<dd><p>Membership matrix of the node to the clusters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>contigs</strong> (<em>dataframe</em>) &#8211; with column pos and pos_cluster</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">B, Membership matrix #node X #clusters,
+B(g,c) = bool(g in c)</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">sparse_matrix</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.matrices.reference_membership">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">reference_membership</tt><big>(</big><em>level</em>, <em>contigs</em>, <em>taxonomy</em>, <em>condition=&quot;origin=='refseq_jan14'&quot;</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#reference_membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.reference_membership" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build K the (Genome X Taxonomic class) reference membership matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>level</strong> &#8211; (str) column name of ref. taxonomy.</li>
+<li><strong>contigs</strong> &#8211; (dataframe) with columns:
+pos: position in the matrix (int).
+&#8220;level&#8221;: reference taxonomy (str).</li>
+<li><strong>taxonomy</strong> &#8211; (dataframe) with columns:
+name: name of the class  (str).
+pos: position in matrix (int).</li>
+<li><strong>condition</strong> &#8211; (str) a query to filter the contig dataframe.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">K, Bool(K[c,t]) == Contig c is of class t.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sparse_matrix</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.matrices.correspondence">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">correspondence</tt><big>(</big><em>K</em>, <em>B</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#correspondence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.correspondence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the (cluster X taxonomic class) correspondances matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>K</strong> (<em>sparse matrix</em>) &#8211; Reference membership matrix.</li>
+<li><strong>B</strong> (<em>sparse matrix</em>) &#8211; Membership matrix.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(tuple of sparse_matrix): including
+Q: Correspondance matrix
+R: Recall (or coverage)
+P: Precision
+F: F-measure 2PR/(P+R)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.matrices.clustering_wise_metrics">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">clustering_wise_metrics</tt><big>(</big><em>P</em>, <em>R</em>, <em>B</em>, <em>K</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#clustering_wise_metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.clustering_wise_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the clustering wise recall, precision and f-measure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>P</strong> (<em>sparse matrix</em>) &#8211; Precision.</li>
+<li><strong>R</strong> (<em>sparse matrix</em>) &#8211; Recall.</li>
+<li><strong>B</strong> (<em>sparse matrix</em>) &#8211; Membership</li>
+<li><strong>K</strong> (<em>sparse matrix</em>) &#8211; Taxonomic classes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">including:
+int: Clustering wise precision
+int: Clustering wise recall
+int: Clustering wise f-measure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.matrices.link_clusters">
+<tt class="descclassname">vcontact.matrices.</tt><tt class="descname">link_clusters</tt><big>(</big><em>network</em>, <em>contigs</em>, <em>col_cluster='pos_cluster'</em><big>)</big><a class="reference internal" href="_modules/vcontact/matrices.html#link_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.matrices.link_clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Link the clusters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>network</strong> (<em>sparse-matrix</em>) &#8211; similarity network.</li>
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; with columns pos (position in the matrix) and
+&#8220;col_cluster&#8221; (cluster of the contig).</li>
+<li><strong>col_cluster</strong> (<em>str</em>) &#8211; column to use in &#8220;contigs&#8221;.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">sparse-matrix: Contig cluster network, edge weight is inter over intra
+total similarity.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.ml_functions">
+<span id="vcontact-ml-functions-module"></span><h2>vcontact.ml_functions module<a class="headerlink" href="#module-vcontact.ml_functions" title="Permalink to this headline">¶</a></h2>
+<p>Machine learning functions - Some helper functions from ML</p>
+<dl class="function">
+<dt id="vcontact.ml_functions.split_dataset">
+<tt class="descclassname">vcontact.ml_functions.</tt><tt class="descname">split_dataset</tt><big>(</big><em>dataset</em>, <em>criterion</em>, <em>fold</em><big>)</big><a class="reference internal" href="_modules/vcontact/ml_functions.html#split_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.ml_functions.split_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split the dataset in &lt;fold&gt; startified parts to use as training and
+cross validation test. Stratified means that the proportions of criterion
+in the original dataset are conserved as much as possible in the subsets.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataset</strong> &#8211; (dataframe) the data.</li>
+<li><strong>fold</strong> &#8211; (int) number of parts in which to split the dataset.</li>
+<li><strong>criterion</strong> &#8211; (str) column on which perform the stratification.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">with the column &#8220;cvset_criterion&#8221; (int) in [0-fold-1] added.
+gives the id of the set this contig belong to. Set to nan to the
+contigs that do not meet the criterion.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataset</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.ml_functions.classification_metrics">
+<tt class="descclassname">vcontact.ml_functions.</tt><tt class="descname">classification_metrics</tt><big>(</big><em>dataset</em>, <em>ref_col='reference'</em>, <em>pred_col='predicted'</em><big>)</big><a class="reference internal" href="_modules/vcontact/ml_functions.html#classification_metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.ml_functions.classification_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a series of metric given a classification.</p>
+<p>The metrics are &#8220;macro-averaged&#8221;, which means that we take the average
+of metric between the classes. As a consequence each class as the
+same wieght in the final result regardless of its size.</p>
+<p>Non affiliated references (NaN) are dropped.</p>
+<p>Predicted classes absent from the references or that are not defined (NaN)
+are counting as negative prediction for all classess (and thus dispatched
+between True and False negatives).</p>
+<p>By convention if the divider is null the metric is null.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset</strong> (<em>pandas.DataFrame</em>) &#8211; one row by entry.
+reference: the reference classification of the entry
+predicted: the predicted classification of the entry</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>ref_col (str): column where the reference classes are.</dt>
+<dd>pred_col (str): column where the predicted classes are.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A dictionary including:
+entries: number of entries.
+reference_entries: number of entries with a reference class.
+reference_classes: number of different classes. (used for<blockquote>
+<div>the macro averaging).</div></blockquote>
+<p>common_classes: number of classes found in reference and prediction.
+classified_entries: number of entries with a predicted class.
+classified_classes: number of different predicted classes.
+recall: TP/(TP+FN) (positive effectively predicted as positive).</p>
+<blockquote>
+<div>(a.k.a, sensitivity, power or 1-type II error).</div></blockquote>
+<dl class="docutils">
+<dt>precision: TP/(TP+FP) (predicted positive effectively positive).</dt>
+<dd>(a.k.a. positive predictive value).</dd>
+<dt>specificity: TN/(FP+FN) negative effectively predicted as negative.</dt>
+<dd>(a.k.a 1-type I error)</dd>
+</dl>
+<p>fmeasure: 2PR/(P+R) harmonic mean of precision and recall.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.modules">
+<span id="vcontact-modules-module"></span><h2>vcontact.modules module<a class="headerlink" href="#module-vcontact.modules" title="Permalink to this headline">¶</a></h2>
+<p>Modules are groups of protein families</p>
+<dl class="class">
+<dt id="vcontact.modules.Modules">
+<em class="property">class </em><tt class="descclassname">vcontact.modules.</tt><tt class="descname">Modules</tt><big>(</big><em>pcm</em>, <em>threshold=10</em>, <em>name=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Args:
+pcm: PCMatrix object or a tuple:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>(features (df), contigs (df),</dt>
+<dd>pc similirity-network (sp.matrix), pc-profiles (sp.matrix)).</dd>
+</dl>
+</div></blockquote>
+<p>threshold: (int) Minimal sig value to take into account an edge.
+name: (str) A name to identify the object.</p>
+<dl class="method">
+<dt id="vcontact.modules.Modules.define_modules">
+<tt class="descname">define_modules</tt><big>(</big><em>matrix</em>, <em>I=5</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.define_modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.define_modules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the pc network in a file ready for MCL
+Run MCL
+Load clusters from the mcl results</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> &#8211; (scipy.sparse matrix) network.</li>
+<li><strong>fi</strong> &#8211; (str) filename.</li>
+<li><strong>I</strong> &#8211; (float) Inflation for mcl.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dataframe containing:
+name: the name of the module.
+size: the number of protein clusters in the module.
+pos: the position of the module in the matrix.
+proteins: the number of proteins in the module.
+annotated_proteins: the number of annotated proteins in the module.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Side-Effects:</dt>
+<dd>self.features: Add the column &#8220;module&#8221;.</dd>
+<dt>Saved Files:</dt>
+<dd>name.ntwk: The pc similarity network.
+name_mcl_I.clusters: mcl results.
+name_mcl_I_modules.pandas: the module dataframe.
+name_mcl_I_features.pandas: the pc dataframe.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.modules.Modules.module_in_contigs">
+<tt class="descname">module_in_contigs</tt><big>(</big><em>matrix=None</em>, <em>contigs=None</em>, <em>modules=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.module_in_contigs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.module_in_contigs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the presence of modules in each contig</p>
+<dl class="docutils">
+<dt>Input :</dt>
+<dd>matrix: (scipy.sparse), M[contigs,pc] =  &#8220;pc in contig&#8221; (bool)
+contigs: (pandas.DataFrame)
+modules: (pandas.DataFrame) with columns : pos,</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">(matrix), S[contig,module] = proportions of module&#8217;s pcs
+present in contig (in [0,1])</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">S</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.modules.Modules.link_modules_and_clusters">
+<tt class="descname">link_modules_and_clusters</tt><big>(</big><em>clusters</em>, <em>matrix_modules=None</em>, <em>modules=None</em>, <em>contigs=None</em>, <em>thres=1</em>, <em>own_threshold=0.7</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Link the modules with the contigs clusters
+using the hypergeometric formula.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix_modules</strong> &#8211; (scipy.sparse)
+bool(M[contig,module]&gt;=own_threshold): module is present in contig</li>
+<li><strong>modules</strong> &#8211; (pandas.DataFrame)</li>
+<li><strong>clusters</strong> &#8211; (pandas.DataFrame)</li>
+<li><strong>thres</strong> &#8211; (float) significativity threshold.</li>
+<li><strong>own_threshold</strong> &#8211; minimal proportion of PCs to &#8220;own&#8221; the module.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">S (scipy.sparse) S[module,cluster] = sig.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Formula:</dt>
+<dd><dl class="first last docutils">
+<dt>P(X&gt;=c) ~ H(n,a,b)</dt>
+<dd>c: number of contigs in cluster c owning module m.
+n: number of contigs.
+a: number of contigs in the cluster c.
+b: number of contigs owning module m.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.modules.Modules.link_modules_and_clusters_df">
+<tt class="descname">link_modules_and_clusters_df</tt><big>(</big><em>clusters</em>, <em>modules=None</em>, <em>matrix_modules_and_clusters=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dataframe giving the association between clusters and modules</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>clusters</strong> &#8211; (dataframe) informations about the clusters</li>
+<li><strong>matrix_modules_and_clusters</strong> &#8211; (sparse matrix) significativity of the associations</li>
+<li><strong>modules</strong> &#8211; (dataframe) information about the modules</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dataframe containing the position of the module,
+of the cluster, the significativity of the association
+and merged with the lines from modules and clusters..</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.options">
+<span id="vcontact-options-module"></span><h2>vcontact.options module<a class="headerlink" href="#module-vcontact.options" title="Permalink to this headline">¶</a></h2>
+<p>General options</p>
+<dl class="data">
+<dt id="vcontact.options.names">
+<tt class="descclassname">vcontact.options.</tt><tt class="descname">names</tt><em class="property"> = ['HTVC010P', 'HTVC011P', 'HTVC019P', 'HTVC008M']</em><a class="headerlink" href="#vcontact.options.names" title="Permalink to this definition">¶</a></dt>
+<dd><p>refseq_fi = {}
+files = {&#8220;refseq&#8221;:refseq_fi,</p>
+<blockquote>
+<div>&#8220;tara&#8221;:tara_fi}</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.pc_matrix">
+<span id="vcontact-pc-matrix-module"></span><h2>vcontact.pc_matrix module<a class="headerlink" href="#module-vcontact.pc_matrix" title="Permalink to this headline">¶</a></h2>
+<p>Object containing th pc-profiles of the contigs and able to
+compute the similarity network on the contigs and the pcs.</p>
+<dl class="class">
+<dt id="vcontact.pc_matrix.PCMatrix">
+<em class="property">class </em><tt class="descclassname">vcontact.pc_matrix.</tt><tt class="descname">PCMatrix</tt><big>(</big><em>cluster_proteins</em>, <em>clusters</em>, <em>ref_proteins</em>, <em>contigs</em>, <em>contig_names=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="docutils">
+<dt>Protein Cluster presence/absence matrix, or PCprofiles.</dt>
+<dd><ul class="first last simple">
+<li>Built from a protein cluster object.</li>
+<li>Usefull in network building.</li>
+</ul>
+</dd>
+</dl>
+<p>Args:
+cluster_proteins: pandas dataframe with :</p>
+<blockquote>
+<div>protein_id: (index)
+cluster:</div></blockquote>
+<dl class="docutils">
+<dt>clusters: pandas dataframe with:</dt>
+<dd>name: (index)
+size:</dd>
+<dt>ref_proteins: = pandas dataframe with:</dt>
+<dd>protein_id: (index)
+contig:
+function:</dd>
+<dt>contigs: pandas dataframe with:</dt>
+<dd>name: (index)
+family:
+genus:
+origin:</dd>
+<dt>contig_names: (iterable) names of contigs to keep in the profiles.</dt>
+<dd>(if none all contigs from contigs are used)</dd>
+</dl>
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.filtering">
+<tt class="descname">filtering</tt><big>(</big><em>contigs</em>, <em>contig_names</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.filtering"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.filtering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filering the contigs
+input :
+- contigs = pandas dataframe with:</p>
+<blockquote>
+<div>index : name, family, genus, origin</div></blockquote>
+<ul class="simple">
+<li>contig_names = iterable : names of contigs to keep
+(if none all contigs from contigs are used)</li>
+</ul>
+<p>output
+- contigs = filtered pandas dataframe</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.load_profiles">
+<tt class="descname">load_profiles</tt><big>(</big><em>ref_proteins</em>, <em>cluster_proteins</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.load_profiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.load_profiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a Protein cluster presence/absence matrix.</p>
+<p>INPUT:
+ref_proteins = pandas dataframe with:</p>
+<blockquote>
+<div>index : protein_id, contig, function</div></blockquote>
+<dl class="docutils">
+<dt>cluster_proteins = pandas dataframe with :</dt>
+<dd>index : protein_id, cluster</dd>
+</dl>
+<p>OUTPUT:
+- matrix (scipy.sparse.csr_matrix) contigs x protein_clusters.</p>
+<blockquote>
+<div>M(c,p) = Bool(&#8220;Contig c has the PC p&#8221;)</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.network">
+<tt class="descname">network</tt><big>(</big><em>matrix</em>, <em>singletons</em>, <em>thres=1</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.network" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the hypergeometric-similarity contig network.</p>
+<blockquote>
+<div>M(c,p) == True &lt;-&gt; PC p is in Contig c.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>thres</strong> (<em>float</em>) &#8211; Minimal significativity to store an edge value.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">scipy.sparse: S symmetric lil matrix, contigs x contigs.
+S(c,c) = sig(link)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.network_modules">
+<tt class="descname">network_modules</tt><big>(</big><em>matrix=None</em>, <em>thres=1</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.network_modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.network_modules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the hypergeometric-similarity pc network.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Use only the PCs that are present in 3 contigs or more.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>scipy.sparse</em>) &#8211; contigs x protein clusters :
+M(c,p) == True &lt;-&gt; PC p is in Contig c.</li>
+<li><strong>thres</strong> (<em>float</em>) &#8211; Minimal significativity to store an edge value.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">scipy.sparse: Symmetric lil_matrix, PCs x PCs
+S(c,c) = sig(link)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.nodes_properties">
+<tt class="descname">nodes_properties</tt><big>(</big><em>matrix</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.nodes_properties"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.nodes_properties" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute several node specific statistics.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>matrix</strong> &#8211; (sparse.matrix) contig-similaritt network</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>Side-effect:</dt>
+<dd><dl class="first last docutils">
+<dt>self.contigs: Add the following columns:</dt>
+<dd><p class="first">degree: Number of edge to the node.
+clustering_coefficient: Proportion of existing edges</p>
+<blockquote>
+<div>over possible edges in the neighborhood of the node</div></blockquote>
+<dl class="last docutils">
+<dt>betweeness_centrality: sum of the fraction of all-pairs</dt>
+<dd>shortest path that pass trhough the node.</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vcontact.pc_matrix.PCMatrix.to_pickle">
+<tt class="descname">to_pickle</tt><big>(</big><em>path=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix.to_pickle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pickle (serialize) object to file path.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.pc_matrix.read_pickle">
+<tt class="descclassname">vcontact.pc_matrix.</tt><tt class="descname">read_pickle</tt><big>(</big><em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#read_pickle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.read_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read pickled object in file path.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.protein_clusters">
+<span id="vcontact-protein-clusters-module"></span><h2>vcontact.protein_clusters module<a class="headerlink" href="#module-vcontact.protein_clusters" title="Permalink to this headline">¶</a></h2>
+<p>Protein_clusters.py</p>
+<dl class="class">
+<dt id="vcontact.protein_clusters.ProteinClusters">
+<em class="property">class </em><tt class="descclassname">vcontact.protein_clusters.</tt><tt class="descname">ProteinClusters</tt><big>(</big><em>clusters_fi</em>, <em>keys=False</em><big>)</big><a class="reference internal" href="_modules/vcontact/protein_clusters.html#ProteinClusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.protein_clusters.ProteinClusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A class to store protein clusters</p>
+<p>Initialise the onject with a cluster file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cluster_fi</strong> (<em>str</em>) &#8211; path to clusters file</li>
+<li><strong>keys</strong> (<em>bool</em>) &#8211; parse the functions of the proteins in each cluster.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="vcontact.protein_clusters.ProteinClusters.load_clusters">
+<tt class="descname">load_clusters</tt><big>(</big><em>fi</em>, <em>keys</em><big>)</big><a class="reference internal" href="_modules/vcontact/protein_clusters.html#ProteinClusters.load_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.protein_clusters.ProteinClusters.load_clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load given clusters file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fi</strong> (<em>str</em>) &#8211; path to clusters file</li>
+<li><strong>keys</strong> (<em>bool</em>) &#8211; parse the functions of the proteins in each cluster</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">pandas.HDF5Store: containing the dataframe proetin and clusters.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The function is painfully slow with keys=True. I&#8217;m not sure why and I
+do not have the time to optimize it. It is probably easy to fix though.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.tools">
+<span id="vcontact-tools-module"></span><h2>vcontact.tools module<a class="headerlink" href="#module-vcontact.tools" title="Permalink to this headline">¶</a></h2>
+<p>Usefull functions and snippets</p>
+<dl class="function">
+<dt id="vcontact.tools.summary">
+<tt class="descclassname">vcontact.tools.</tt><tt class="descname">summary</tt><big>(</big><em>matrix</em>, <em>nodeinfo</em>, <em>criterion='origin'</em><big>)</big><a class="reference internal" href="_modules/vcontact/tools.html#summary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.tools.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Summary of some graph proterties</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> &#8211; (sparse matrix) adjacency matrix</li>
+<li><strong>nodeinfo</strong> &#8211; (dataframe) with:
+name: node name (str).
+pos: node position in the matrix (int)
+&#8220;criterion&#8221;: a column to distinguish categories of nodes.</li>
+<li><strong>criterion</strong> &#8211; column to use to distinguish nodes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A dict. containing informations about the graph.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.tools.filtering">
+<tt class="descclassname">vcontact.tools.</tt><tt class="descname">filtering</tt><big>(</big><em>matrix</em>, <em>threshold</em><big>)</big><a class="reference internal" href="_modules/vcontact/tools.html#filtering"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.tools.filtering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter a sparse matrix according to a threshold</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> &#8211; (sparse matrix)</li>
+<li><strong>threshold</strong> &#8211; (float)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The sparse matrix where every cell &lt;= threshold are now null</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.tools.summary_assoc">
+<tt class="descclassname">vcontact.tools.</tt><tt class="descname">summary_assoc</tt><big>(</big><em>matrix</em>, <em>info</em>, <em>criterion=None</em>, <em>lines=True</em>, <em>thres=0</em>, <em>name_thres=10</em><big>)</big><a class="reference internal" href="_modules/vcontact/tools.html#summary_assoc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.tools.summary_assoc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-vcontact">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-vcontact" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">vcontact package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#vcontact-associations-module">vcontact.associations module</a></li>
+<li><a class="reference internal" href="#vcontact-cache-module">vcontact.cache module</a></li>
+<li><a class="reference internal" href="#module-vcontact.exports">vcontact.exports module</a></li>
+<li><a class="reference internal" href="#vcontact-feature-select-module">vcontact.feature_select module</a></li>
+<li><a class="reference internal" href="#module-vcontact.genome_clusters">vcontact.genome_clusters module</a></li>
+<li><a class="reference internal" href="#module-vcontact.genomes">vcontact.genomes module</a></li>
+<li><a class="reference internal" href="#vcontact-main-module">vcontact.main module</a></li>
+<li><a class="reference internal" href="#module-vcontact.matrices">vcontact.matrices module</a></li>
+<li><a class="reference internal" href="#module-vcontact.ml_functions">vcontact.ml_functions module</a></li>
+<li><a class="reference internal" href="#module-vcontact.modules">vcontact.modules module</a></li>
+<li><a class="reference internal" href="#module-vcontact.options">vcontact.options module</a></li>
+<li><a class="reference internal" href="#module-vcontact.pc_matrix">vcontact.pc_matrix module</a></li>
+<li><a class="reference internal" href="#module-vcontact.protein_clusters">vcontact.protein_clusters module</a></li>
+<li><a class="reference internal" href="#module-vcontact.tools">vcontact.tools module</a></li>
+<li><a class="reference internal" href="#module-vcontact">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/vcontact.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">vcontact beta documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.matrices &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.matrices</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Matrices used to compare the reference taxonomy with the clustering results.</span>
+
+<span class="sd">B: Membership matrix.</span>
+<span class="sd">    B[g,c]: proportion of edges weight linking node g to nodes in c.</span>
+<span class="sd">K: Reference membership matrix.</span>
+<span class="sd">    K[g,t]: (bool) node g belongs to taxonomic class t.</span>
+<span class="sd">Q: Correspondance matrix.</span>
+<span class="sd">    Q[c,t]: Sum for the sequence of class t of the membership to the clusters c. </span>
+<span class="sd">R: Recall matrix.</span>
+<span class="sd">    R[c,t]: Proportion of (Q affiliated to t) that belongs to c.</span>
+<span class="sd">P: Precision matrix.</span>
+<span class="sd">    P[c,t]: Proportion of (Q in cluster c) that is affiliated to t.</span>
+<span class="sd">F: F-measure matrix.</span>
+<span class="sd">    F[c,t]: (2PR)/(P+R)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="kn">as</span> <span class="nn">sparse</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="membership"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.membership">[docs]</a><span class="k">def</span> <span class="nf">membership</span><span class="p">(</span><span class="n">mcl_results</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Membership matrix of the node to the clusters.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mcl_results: (list of list) a list of nodes name by cluster.</span>
+<span class="sd">            Extracted from the lines of the mcl output.</span>
+<span class="sd">        network: (sparse matrix) similarity network.</span>
+<span class="sd">        nodes: (dataframe) with a column &quot;name&quot; corresponding to the</span>
+<span class="sd">            entries in mcl_results and a column &quot;pos&quot; corresponding to</span>
+<span class="sd">            the position in the matrix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        sparse_matrix: B, Membership matrix #node X #clusters,</span>
+<span class="sd">            B(g,c) is the proportion of edges weight linking the</span>
+<span class="sd">            node g to the cluster C</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">network</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="p">(</span><span class="n">network</span> <span class="o">-</span> <span class="n">network</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">network</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c">#Sum of weights linking to a given target.</span>
+    <span class="n">B_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">network</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">mcl_results</span><span class="p">))</span>
+
+
+    <span class="c"># A list giving the columns of the i-th cluster members :</span>
+    <span class="n">clusters</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">(</span><span class="n">nodes</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s">&quot;name in members&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ix</span><span class="p">[:,</span> <span class="s">&quot;pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">members</span> <span class="ow">in</span> <span class="n">mcl_results</span><span class="p">]</span>
+    <span class="n">B_clust</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">network</span><span class="p">[:,</span> <span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">cols</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">])</span>
+
+
+    <span class="n">B</span> <span class="o">=</span> <span class="n">B_clust</span><span class="o">/</span><span class="n">B_sum</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">B</span>
+</div>
+<div class="viewcode-block" id="bool_membership"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.bool_membership">[docs]</a><span class="k">def</span> <span class="nf">bool_membership</span><span class="p">(</span><span class="n">contigs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Membership matrix of the node to the clusters.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        contigs (dataframe): with column pos and pos_cluster</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        sparse_matrix: B, Membership matrix #node X #clusters,</span>
+<span class="sd">            B(g,c) = bool(g \in c)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nb_contigs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">contigs</span><span class="p">)</span>
+    <span class="n">nb_clusters</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">pos_cluster</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">+</span><span class="mi">1</span>
+    <span class="n">xy</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">ix</span><span class="p">[:,[</span><span class="s">&quot;pos&quot;</span><span class="p">,</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">(</span> <span class="p">([</span><span class="mf">1.0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">xy</span><span class="p">),</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">xy</span><span class="p">)</span> <span class="p">),</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">nb_contigs</span><span class="p">,</span><span class="n">nb_clusters</span><span class="p">)</span> <span class="p">)</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">B</span>
+
+</div>
+<div class="viewcode-block" id="reference_membership"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.reference_membership">[docs]</a><span class="k">def</span> <span class="nf">reference_membership</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">contigs</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span>
+                         <span class="n">condition</span><span class="o">=</span><span class="s">&quot;origin==&#39;refseq_jan14&#39;&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build K the (Genome X Taxonomic class) reference membership matrix.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        level: (str) column name of ref. taxonomy.</span>
+<span class="sd">        contigs: (dataframe) with columns:</span>
+<span class="sd">            pos: position in the matrix (int).</span>
+<span class="sd">            &quot;level&quot;: reference taxonomy (str).</span>
+<span class="sd">        taxonomy: (dataframe) with columns:</span>
+<span class="sd">            name: name of the class  (str).</span>
+<span class="sd">            pos: position in matrix (int).</span>
+<span class="sd">        condition: (str) a query to filter the contig dataframe.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        sparse_matrix: K, Bool(K[c,t]) == Contig c is of class t.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">taxonomy</span> <span class="o">=</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">contigs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">taxonomy</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">contigs</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">condition</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">(</span><span class="s">&quot;pos&quot;</span><span class="p">,</span> <span class="n">level</span><span class="p">)]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">tax</span> <span class="ow">in</span> <span class="n">contigs</span><span class="p">:</span>
+        <span class="n">K</span><span class="p">[</span><span class="n">pos</span><span class="p">,</span> <span class="n">taxonomy</span><span class="o">.</span><span class="n">pos</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">tax</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="n">K</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">K</span>
+
+</div>
+<div class="viewcode-block" id="correspondence"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.correspondence">[docs]</a><span class="k">def</span> <span class="nf">correspondence</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build the (cluster X taxonomic class) correspondances matrix.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        K (sparse matrix): Reference membership matrix.</span>
+<span class="sd">        B (sparse matrix): Membership matrix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (tuple of sparse_matrix): including</span>
+<span class="sd">            Q: Correspondance matrix</span>
+<span class="sd">            R: Recall (or coverage)</span>
+<span class="sd">            P: Precision</span>
+<span class="sd">            F: F-measure 2PR/(P+R)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">B</span><span class="p">),</span> <span class="n">K</span><span class="o">.</span><span class="n">todense</span><span class="p">())</span>
+
+    <span class="c"># Precision</span>
+    <span class="n">Q_hsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">Q</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span><span class="o">*</span><span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">Q</span> <span class="o">/</span> <span class="n">Q_hsum</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
+
+    <span class="c"># Recall</span>
+    <span class="n">Q_vsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">Q</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)]</span><span class="o">*</span><span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">Q</span> <span class="o">/</span> <span class="n">Q_vsum</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+
+    <span class="n">F</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">),</span> <span class="n">P</span><span class="o">+</span><span class="n">R</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Q</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">F</span>
+</div>
+<div class="viewcode-block" id="clustering_wise_metrics"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.clustering_wise_metrics">[docs]</a><span class="k">def</span> <span class="nf">clustering_wise_metrics</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the clustering wise recall, precision and f-measure.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        P (sparse matrix): Precision.</span>
+<span class="sd">        R (sparse matrix): Recall.</span>
+<span class="sd">        B (sparse matrix): Membership</span>
+<span class="sd">        K (sparse matrix): Taxonomic classes</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: including:</span>
+<span class="sd">            int: Clustering wise precision</span>
+<span class="sd">            int: Clustering wise recall</span>
+<span class="sd">            int: Clustering wise f-measure</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">cwise_P</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="n">cwise_P</span> <span class="o">/=</span> <span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="n">cwise_R</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">))))</span>
+    <span class="n">cwise_R</span> <span class="o">/=</span> <span class="n">K</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="n">cwise_F</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">cwise_P</span> <span class="o">*</span> <span class="n">cwise_R</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">cwise_P</span> <span class="o">+</span> <span class="n">cwise_R</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cwise_P</span><span class="p">,</span> <span class="n">cwise_R</span><span class="p">,</span> <span class="n">cwise_F</span>
+
+</div>
+<div class="viewcode-block" id="link_clusters"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.link_clusters">[docs]</a><span class="k">def</span> <span class="nf">link_clusters</span><span class="p">(</span><span class="n">network</span><span class="p">,</span><span class="n">contigs</span><span class="p">,</span><span class="n">col_cluster</span><span class="o">=</span><span class="s">&quot;pos_cluster&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Link the clusters </span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        network (sparse-matrix): similarity network.</span>
+<span class="sd">        contigs (dataframe): with columns pos (position in the matrix) and</span>
+<span class="sd">            &quot;col_cluster&quot; (cluster of the contig).</span>
+<span class="sd">        col_cluster (str): column to use in &quot;contigs&quot;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        sparse-matrix: Contig cluster network, edge weight is inter over intra </span>
+<span class="sd">           total similarity. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">contigs</span> <span class="o">=</span> <span class="n">contigs</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">col_cluster</span><span class="p">])</span>
+
+    <span class="c"># bool(Z[contig,cluster]) == contig is in cluster </span>
+    <span class="n">Z</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">(([</span><span class="mf">1.0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">contigs</span><span class="p">),</span>
+                           <span class="p">[</span><span class="n">contigs</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span><span class="n">contigs</span><span class="p">[</span><span class="n">col_cluster</span><span class="p">]]))</span>
+    <span class="n">Z</span> <span class="o">=</span> <span class="n">Z</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+
+    <span class="c"># S = Z^{T}NZ[cluster,cluster] = sum of weights between the two clusters</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Z</span><span class="p">))</span>
+        
+    <span class="c"># Each column is the diagonal of S. (aka intra sum of weight)</span>
+    <span class="n">sii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">S</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()]</span> <span class="o">*</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c"># Inter/intra links</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">+</span> <span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">sii</span> <span class="o">+</span> <span class="n">sii</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="c"># The diagonal is null</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">L</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
