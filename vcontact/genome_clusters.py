@@ -10,11 +10,11 @@ import numpy as np
 import scipy.sparse as sparse
 import pandas
 
-import pc_matrix
-import options
-import matrices
-import ml_functions
-import associations
+from . import pc_matrix
+from . import options
+from . import matrices
+from . import ml_functions
+from . import associations
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class GenomeCluster(object):
             clusters: (pandas df) Contig clusters
             mcl_results: (list of list) mcl_result[cluster][prot]
     """
+    
     def __init__(self,pcm,inflation=2,threshold=None,name=None,membership_simple=False):
         """
         Init the object with a pc-profile object and perform the clustering

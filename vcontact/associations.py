@@ -1,9 +1,8 @@
 """ Functions to build the associations between the objects from the matrices. """
-
 import numpy as np
 import pandas
 
-def cluster_taxonomy(clusters, taxonomy,level, P, R):
+def cluster_taxonomy(clusters, taxonomy, level, P, R):
     """Add the associations to the cluster and taxonomy dataframes.
     Using the maximum of precision taxonomic class of each cluster
     and the maximum of recall cluster of each taxonomic class.
@@ -17,8 +16,9 @@ def cluster_taxonomy(clusters, taxonomy,level, P, R):
         R (sparse_matrix): Recall matrix  (cluster X taxonomic class)
 
     Returns:
-        dataframe: clusters with added columns "pos_level" and "precision_level"
-        dataframe: taxonomy with added columns "pos_cluster" and "recall"
+        (dataframe,dataframe): dataframe clusters with added columns "pos_level"
+            and "precision_level" and dataframe taxonomy with added columns
+            "pos_cluster" and "recall".
     """
 
     df = {}
@@ -73,7 +73,7 @@ def contig_cluster(contigs, B):
     return contigs
 
 def contig_taxonomy(contigs, taxonomy, clusters, level,
-                     cluster_choice="pos_cluster_mbship"):
+                    cluster_choice="pos_cluster_mbship"):
     """
     Associate each contig with its predicted taxonomic class
 

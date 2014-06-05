@@ -4,13 +4,10 @@ import subprocess
 import logging
 
 try:
-    version = subprocess.check_output(["git", "describe"]).strip()
-except (OSError, subprocess.CalledProcessError) as e:
-    try:
-        with open("VERSION") as f:
-            version = f.read()
-    except IOError:
-        version = "unknown version"
+    with open("../VERSION") as f:
+        version = f.read()
+except IOError:
+    version = "unknown version"
         
 data_folder = os.path.expanduser("~/data/")
 

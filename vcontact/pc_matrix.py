@@ -14,8 +14,16 @@ logger = logging.getLogger(__name__)
 class PCMatrix(object):
     """
     Protein Cluster presence/absence matrix, or PCprofiles.
-       - Built from a protein cluster object.
-       - Usefull in network building.
+    Used to build the similarity networks.
+
+    Attributes:
+        contigs (pandas.DataFrame):
+        features (pandas.DataFrame):
+        name (str): 
+        profiles (sparse.matrix):
+        singletons (sparse.matrix): 
+        contig_ntw (sparse.matrix):
+        modules_ntw (sparse.matrix):
     """
 
     def __init__(self,cluster_proteins, clusters, ref_proteins, contigs, contig_names = None):
@@ -41,7 +49,7 @@ class PCMatrix(object):
                 (if none all contigs from contigs are used)
         """
 
-        self.name = "PCmatrix"
+        self.name = "PCprofiles"
         
         self.features = clusters
         self.features.index.name = "name"
