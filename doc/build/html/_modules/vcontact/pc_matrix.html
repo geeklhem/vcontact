@@ -64,8 +64,16 @@
 <div class="viewcode-block" id="PCMatrix"><a class="viewcode-back" href="../../vcontact.html#vcontact.pc_matrix.PCMatrix">[docs]</a><span class="k">class</span> <span class="nc">PCMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Protein Cluster presence/absence matrix, or PCprofiles.</span>
-<span class="sd">       - Built from a protein cluster object.</span>
-<span class="sd">       - Usefull in network building.</span>
+<span class="sd">    Used to build the similarity networks.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        contigs (pandas.DataFrame):</span>
+<span class="sd">        features (pandas.DataFrame):</span>
+<span class="sd">        name (str): </span>
+<span class="sd">        profiles (sparse.matrix):</span>
+<span class="sd">        singletons (sparse.matrix): </span>
+<span class="sd">        contig_ntw (sparse.matrix):</span>
+<span class="sd">        modules_ntw (sparse.matrix):</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">cluster_proteins</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span> <span class="n">ref_proteins</span><span class="p">,</span> <span class="n">contigs</span><span class="p">,</span> <span class="n">contig_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
@@ -91,7 +99,7 @@
 <span class="sd">                (if none all contigs from contigs are used)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;PCmatrix&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;PCprofiles&quot;</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">clusters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;name&quot;</span>
@@ -114,8 +122,8 @@
 
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="s">&quot;PC-profiles object {2}&quot;</span>
-                <span class="s">&quot;{0[0]} contigs by {0[1]} shared protein clusters.&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s">&quot;PC-profiles object {2} &quot;</span>
+                <span class="s">&quot;{0[0]} contigs by {0[1]} shared protein clusters &quot;</span>
                 <span class="s">&quot;and {1} singletons.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
                                               <span class="bp">self</span><span class="o">.</span><span class="n">singletons</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
                                               <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>

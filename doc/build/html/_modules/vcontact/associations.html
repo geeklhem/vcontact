@@ -49,11 +49,10 @@
             
   <h1>Source code for vcontact.associations</h1><div class="highlight"><pre>
 <span class="sd">&quot;&quot;&quot; Functions to build the associations between the objects from the matrices. &quot;&quot;&quot;</span>
-
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span>
 
-<div class="viewcode-block" id="cluster_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.cluster_taxonomy">[docs]</a><span class="k">def</span> <span class="nf">cluster_taxonomy</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span><span class="n">level</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<div class="viewcode-block" id="cluster_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.cluster_taxonomy">[docs]</a><span class="k">def</span> <span class="nf">cluster_taxonomy</span><span class="p">(</span><span class="n">clusters</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Add the associations to the cluster and taxonomy dataframes.</span>
 <span class="sd">    Using the maximum of precision taxonomic class of each cluster</span>
 <span class="sd">    and the maximum of recall cluster of each taxonomic class.</span>
@@ -67,8 +66,9 @@
 <span class="sd">        R (sparse_matrix): Recall matrix  (cluster X taxonomic class)</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        dataframe: clusters with added columns &quot;pos_level&quot; and &quot;precision_level&quot;</span>
-<span class="sd">        dataframe: taxonomy with added columns &quot;pos_cluster&quot; and &quot;recall&quot;</span>
+<span class="sd">        (dataframe,dataframe): dataframe clusters with added columns &quot;pos_level&quot;</span>
+<span class="sd">            and &quot;precision_level&quot; and dataframe taxonomy with added columns</span>
+<span class="sd">            &quot;pos_cluster&quot; and &quot;recall&quot;.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="p">{}</span>
@@ -123,7 +123,7 @@
     <span class="k">return</span> <span class="n">contigs</span>
 </div>
 <div class="viewcode-block" id="contig_taxonomy"><a class="viewcode-back" href="../../vcontact.html#vcontact.associations.contig_taxonomy">[docs]</a><span class="k">def</span> <span class="nf">contig_taxonomy</span><span class="p">(</span><span class="n">contigs</span><span class="p">,</span> <span class="n">taxonomy</span><span class="p">,</span> <span class="n">clusters</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span>
-                     <span class="n">cluster_choice</span><span class="o">=</span><span class="s">&quot;pos_cluster_mbship&quot;</span><span class="p">):</span>
+                    <span class="n">cluster_choice</span><span class="o">=</span><span class="s">&quot;pos_cluster_mbship&quot;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Associate each contig with its predicted taxonomic class</span>
 

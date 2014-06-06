@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.exports package &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">vcontact beta documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="vcontact-exports-package">
+<h1>vcontact.exports package<a class="headerlink" href="#vcontact-exports-package" title="Permalink to this headline">¶</a></h1>
+<p>This module contains functions to exports the results of vcontact
+to be used by another software.</p>
+<div class="section" id="module-vcontact.exports.cytoscape">
+<span id="vcontact-exports-cytoscape-module"></span><h2>vcontact.exports.cytoscape module<a class="headerlink" href="#module-vcontact.exports.cytoscape" title="Permalink to this headline">¶</a></h2>
+<p>Export functions to use the data generated with cytoscape.
+<a class="reference external" href="http://www.cytoscape.org/">http://www.cytoscape.org/</a></p>
+<dl class="function">
+<dt id="vcontact.exports.cytoscape.contigs">
+<tt class="descclassname">vcontact.exports.cytoscape.</tt><tt class="descname">contigs</tt><big>(</big><em>network</em>, <em>contigs</em>, <em>clusters</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports/cytoscape.html#contigs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape.contigs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the network and node information in a format
+that can be used with cytoscape (tab files).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>network</strong> (<em>sparse-matrix</em>) &#8211; Similarity network.</li>
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
+<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Tuple of the path to the edge files and
+nodes information files</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.exports.cytoscape.membership">
+<tt class="descclassname">vcontact.exports.cytoscape.</tt><tt class="descname">membership</tt><big>(</big><em>fi</em>, <em>B</em>, <em>contigs</em>, <em>clusters</em>, <em>clusters_list=None</em>, <em>criterion='predicted_family'</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports/cytoscape.html#membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape.membership" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the membership matrix in an input format for cytoscape (csv)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>B</strong> (<em>sparse_matrix</em>) &#8211; Membership matrix.</li>
+<li><strong>contigs</strong> (<em>pandas.df</em>) &#8211; Contigs informations (required columns:
+pos, pos_cluster).</li>
+<li><strong>clusters</strong> (<em>pandas.df</em>) &#8211; Clusters information (required columns:  pos,
+criterion).</li>
+<li><strong>cluster_list</strong> (<em>list</em>) &#8211; The output is restircted to thoses clusters.</li>
+<li><strong>criterion</strong> (<em>str</em>) &#8211; Column on wich group the membership.</li>
+<li><strong>fi</strong> (<em>str</em>) &#8211; Path to the output file.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="vcontact.exports.cytoscape.clusters">
+<tt class="descclassname">vcontact.exports.cytoscape.</tt><tt class="descname">clusters</tt><big>(</big><em>cluster_network</em>, <em>contigs</em>, <em>clusters</em>, <em>criterion</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports/cytoscape.html#clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape.clusters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the network and node information in a format
+that can be used with cytoscape (tab files).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cluster_network</strong> (<em>sparse-matrix</em>) &#8211; cluster network.</li>
+<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
+<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Tuple of the path to the edge files and
+nodes information files</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vcontact.exports.krona">
+<span id="vcontact-exports-krona-module"></span><h2>vcontact.exports.krona module<a class="headerlink" href="#module-vcontact.exports.krona" title="Permalink to this headline">¶</a></h2>
+<p>Export functions for krona.
+<a class="reference external" href="http://sourceforge.net/projects/krona/">http://sourceforge.net/projects/krona/</a></p>
+<dl class="function">
+<dt id="vcontact.exports.krona.textfile">
+<tt class="descclassname">vcontact.exports.krona.</tt><tt class="descname">textfile</tt><big>(</big><em>dataframe</em>, <em>fi</em>, <em>columns=('predicted_family'</em>, <em>'predicted_genus')</em>, <em>placeholder='Non affiliated'</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports/krona.html#textfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.krona.textfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a text file from a dataframe to be used with Krona.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataframe</strong> (<em>pandas.DataFrame</em>) &#8211; data.</li>
+<li><strong>fi</strong> (<em>str</em>) &#8211; path to the file to write.</li>
+<li><strong>columns</strong> (<em>iterable</em>) &#8211; Columns to use as wedges levels.</li>
+<li><strong>placeholder</strong> (<em>str</em>) &#8211; String to use when the value is N/A.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Path to the file.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">str</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Use <cite>ktImportText test_krona</cite></p>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">vcontact.exports package</a><ul>
+<li><a class="reference internal" href="#module-vcontact.exports.cytoscape">vcontact.exports.cytoscape module</a></li>
+<li><a class="reference internal" href="#module-vcontact.exports.krona">vcontact.exports.krona module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/vcontact.exports.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">vcontact beta documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

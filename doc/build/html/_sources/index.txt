@@ -19,6 +19,8 @@ Tutorial and documentation
 
 The method:
 ------------
+
+
 .. figure:: _static/gbca_pipeline.png
    :align:   center
 

@@ -50,17 +50,7 @@
 <div class="section" id="subpackages">
 <h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="vcontact.test.html">vcontact.test package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_exports">vcontact.test.test_exports module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#vcontact-test-test-featureselect-module">vcontact.test.test_featureselect module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_genomes_clusters">vcontact.test.test_genomes_clusters module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_ml">vcontact.test.test_ml module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test.test_pc_matrix">vcontact.test.test_pc_matrix module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="vcontact.test.html#module-vcontact.test">Module contents</a></li>
-</ul>
-</li>
+<ul class="simple">
 </ul>
 </div>
 </div>
@@ -90,11 +80,9 @@ If this maximum is null, the position is set to NaN.</p>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">clusters with added columns &#8220;pos_level&#8221; and &#8220;precision_level&#8221;
-dataframe: taxonomy with added columns &#8220;pos_cluster&#8221; and &#8220;recall&#8221;</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(dataframe,dataframe): dataframe clusters with added columns &#8220;pos_level&#8221;
+and &#8220;precision_level&#8221; and dataframe taxonomy with added columns
+&#8220;pos_cluster&#8221; and &#8220;recall&#8221;.</p>
 </td>
 </tr>
 </tbody>
@@ -155,86 +143,6 @@ can be found.</li>
 </table>
 </dd></dl>
 
-</div>
-<div class="section" id="vcontact-cache-module">
-<h2>vcontact.cache module<a class="headerlink" href="#vcontact-cache-module" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-vcontact.exports">
-<span id="vcontact-exports-module"></span><h2>vcontact.exports module<a class="headerlink" href="#module-vcontact.exports" title="Permalink to this headline">¶</a></h2>
-<p>Export functions to use the data generated with others software.</p>
-<dl class="function">
-<dt id="vcontact.exports.cytoscape_contigs">
-<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_contigs</tt><big>(</big><em>network</em>, <em>contigs</em>, <em>clusters</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_contigs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_contigs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Export the network and node information in a format
-that can be used with cytoscape (tab files).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>network</strong> (<em>sparse-matrix</em>) &#8211; Similarity network.</li>
-<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
-<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
-<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="docutils">
-<dt>Output:</dt>
-<dd><dl class="first last docutils">
-<dt>tuple: Tuple of the path to the edge files and</dt>
-<dd>nodes information files</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="vcontact.exports.cytoscape_membership">
-<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_membership</tt><big>(</big><em>B</em>, <em>contigs</em>, <em>clusters</em>, <em>clusters_list</em>, <em>fi</em>, <em>criterion='predicted_family'</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_membership"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_membership" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save the membership matrix in an input format for cytoscape (csv)</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="vcontact.exports.cytoscape_clusters">
-<tt class="descclassname">vcontact.exports.</tt><tt class="descname">cytoscape_clusters</tt><big>(</big><em>cluster_network</em>, <em>contigs</em>, <em>clusters</em>, <em>criterion</em>, <em>path</em><big>)</big><a class="reference internal" href="_modules/vcontact/exports.html#cytoscape_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.exports.cytoscape_clusters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Export the network and node information in a format
-that can be used with cytoscape (tab files).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>cluster_network</strong> (<em>sparse-matrix</em>) &#8211; cluster network.</li>
-<li><strong>contigs</strong> (<em>dataframe</em>) &#8211; Nodes information.</li>
-<li><strong>clusters</strong> (<em>list</em>) &#8211; Id of clusters to exports.</li>
-<li><strong>path</strong> (<em>str</em>) &#8211; basename of the exported files.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="docutils">
-<dt>Output:</dt>
-<dd><dl class="first last docutils">
-<dt>tuple: Tuple of the path to the edge files and</dt>
-<dd>nodes information files</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="vcontact-feature-select-module">
-<h2>vcontact.feature_select module<a class="headerlink" href="#vcontact-feature-select-module" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-vcontact.genome_clusters">
 <span id="vcontact-genome-clusters-module"></span><h2>vcontact.genome_clusters module<a class="headerlink" href="#module-vcontact.genome_clusters" title="Permalink to this headline">¶</a></h2>
@@ -586,9 +494,6 @@ options.files[&#8220;refseq&#8221;][&#8220;fasta&#8221;] and options.files[&#822
 <dd></dd></dl>
 
 </div>
-<div class="section" id="vcontact-main-module">
-<h2>vcontact.main module<a class="headerlink" href="#vcontact-main-module" title="Permalink to this headline">¶</a></h2>
-</div>
 <div class="section" id="module-vcontact.matrices">
 <span id="vcontact-matrices-module"></span><h2>vcontact.matrices module<a class="headerlink" href="#module-vcontact.matrices" title="Permalink to this headline">¶</a></h2>
 <p>Matrices used to compare the reference taxonomy with the clustering results.</p>
@@ -858,7 +763,7 @@ recall: TP/(TP+FN) (positive effectively predicted as positive).</p>
 <p>Modules are groups of protein families</p>
 <dl class="class">
 <dt id="vcontact.modules.Modules">
-<em class="property">class </em><tt class="descclassname">vcontact.modules.</tt><tt class="descname">Modules</tt><big>(</big><em>pcm</em>, <em>threshold=10</em>, <em>name=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">vcontact.modules.</tt><tt class="descname">Modules</tt><big>(</big><em>pcm</em>, <em>threshold=10</em>, <em>name=None</em>, <em>keyword_matrix_file=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>Args:
 pcm: PCMatrix object or a tuple:</p>
@@ -870,6 +775,31 @@ pcm: PCMatrix object or a tuple:</p>
 </div></blockquote>
 <p>threshold: (int) Minimal sig value to take into account an edge.
 name: (str) A name to identify the object.</p>
+<dl class="method">
+<dt id="vcontact.modules.Modules.load_keywords">
+<tt class="descname">load_keywords</tt><big>(</big><em>fi</em>, <em>modules</em>, <em>features</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.load_keywords"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.load_keywords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the keywords for each modules</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fi</strong> (<em>str</em>) &#8211; a file containing the pickled keyword matrix</li>
+<li><strong>modules</strong> (<em>dataframe</em>) &#8211; informations about the modules.</li>
+<li><strong>features</strong> (<em>dataframe</em>) &#8211; informations about the protein clusters.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">the dataframe module with the &#8220;keys&#8221; column added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="vcontact.modules.Modules.define_modules">
 <tt class="descname">define_modules</tt><big>(</big><em>matrix</em>, <em>I=5</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.define_modules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.define_modules" title="Permalink to this definition">¶</a></dt>
@@ -912,20 +842,22 @@ name_mcl_I_features.pandas: the pc dataframe.</dd>
 <dt id="vcontact.modules.Modules.module_in_contigs">
 <tt class="descname">module_in_contigs</tt><big>(</big><em>matrix=None</em>, <em>contigs=None</em>, <em>modules=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.module_in_contigs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.module_in_contigs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the presence of modules in each contig</p>
-<dl class="docutils">
-<dt>Input :</dt>
-<dd>matrix: (scipy.sparse), M[contigs,pc] =  &#8220;pc in contig&#8221; (bool)
-contigs: (pandas.DataFrame)
-modules: (pandas.DataFrame) with columns : pos,</dd>
-</dl>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">(matrix), S[contig,module] = proportions of module&#8217;s pcs
-present in contig (in [0,1])</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>scipy.sparse</em>) &#8211; , M[contigs,pc] =  &#8220;pc in contig&#8221; (bool)</li>
+<li><strong>modules</strong> (<em>pandas.DataFrame</em>) &#8211; with columns : pos,</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">S</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">S, S[contig,module] = proportions of module&#8217;s pcs
+present in contig (in [0,1])</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">matrix</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -933,18 +865,19 @@ present in contig (in [0,1])</td>
 
 <dl class="method">
 <dt id="vcontact.modules.Modules.link_modules_and_clusters">
-<tt class="descname">link_modules_and_clusters</tt><big>(</big><em>clusters</em>, <em>matrix_modules=None</em>, <em>modules=None</em>, <em>contigs=None</em>, <em>thres=1</em>, <em>own_threshold=0.7</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">link_modules_and_clusters</tt><big>(</big><em>clusters</em>, <em>contigs</em>, <em>modules</em>, <em>matrix_modules</em>, <em>thres</em>, <em>own_threshold</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link the modules with the contigs clusters
 using the hypergeometric formula.</p>
+<blockquote>
+<div>bool(M[contig,module]&gt;=own_threshold): module is present in contig</div></blockquote>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>matrix_modules</strong> &#8211; (scipy.sparse)
-bool(M[contig,module]&gt;=own_threshold): module is present in contig</li>
-<li><strong>modules</strong> &#8211; (pandas.DataFrame)</li>
-<li><strong>clusters</strong> &#8211; (pandas.DataFrame)</li>
+<li><strong>modules</strong> (<em>pandas.DataFrame</em>) &#8211; information about the protein modules</li>
+<li><strong>clusters</strong> (<em>pandas.DataFrame</em>) &#8211; information about the contig clusters</li>
+<li><strong>contigs</strong> (<em>pandas.DataFrame</em>) &#8211; information about the contigs</li>
 <li><strong>thres</strong> &#8211; (float) significativity threshold.</li>
 <li><strong>own_threshold</strong> &#8211; minimal proportion of PCs to &#8220;own&#8221; the module.</li>
 </ul>
@@ -970,16 +903,20 @@ b: number of contigs owning module m.</dd>
 
 <dl class="method">
 <dt id="vcontact.modules.Modules.link_modules_and_clusters_df">
-<tt class="descname">link_modules_and_clusters_df</tt><big>(</big><em>clusters</em>, <em>modules=None</em>, <em>matrix_modules_and_clusters=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters_df" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">link_modules_and_clusters_df</tt><big>(</big><em>clusters</em>, <em>contigs</em>, <em>modules=None</em>, <em>matrix_module=None</em>, <em>thres=1</em>, <em>own_threshold=0.7</em><big>)</big><a class="reference internal" href="_modules/vcontact/modules.html#Modules.link_modules_and_clusters_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.modules.Modules.link_modules_and_clusters_df" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the dataframe giving the association between clusters and modules</p>
+<blockquote>
+<div>bool(M[contig,module]&gt;=own_threshold): module is present in contig</div></blockquote>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>clusters</strong> &#8211; (dataframe) informations about the clusters</li>
-<li><strong>matrix_modules_and_clusters</strong> &#8211; (sparse matrix) significativity of the associations</li>
-<li><strong>modules</strong> &#8211; (dataframe) information about the modules</li>
+<li><strong>modules</strong> (<em>pandas.DataFrame</em>) &#8211; information about the protein modules</li>
+<li><strong>clusters</strong> (<em>pandas.DataFrame</em>) &#8211; information about the contig clusters</li>
+<li><strong>contigs</strong> (<em>pandas.DataFrame</em>) &#8211; information about the contigs</li>
+<li><strong>thres</strong> &#8211; (float) significativity threshold.</li>
+<li><strong>own_threshold</strong> &#8211; minimal proportion of PCs to &#8220;own&#8221; the module.</li>
 </ul>
 </td>
 </tr>
@@ -998,15 +935,6 @@ and merged with the lines from modules and clusters..</p>
 <div class="section" id="module-vcontact.options">
 <span id="vcontact-options-module"></span><h2>vcontact.options module<a class="headerlink" href="#module-vcontact.options" title="Permalink to this headline">¶</a></h2>
 <p>General options</p>
-<dl class="data">
-<dt id="vcontact.options.names">
-<tt class="descclassname">vcontact.options.</tt><tt class="descname">names</tt><em class="property"> = ['HTVC010P', 'HTVC011P', 'HTVC019P', 'HTVC008M']</em><a class="headerlink" href="#vcontact.options.names" title="Permalink to this definition">¶</a></dt>
-<dd><p>refseq_fi = {}
-files = {&#8220;refseq&#8221;:refseq_fi,</p>
-<blockquote>
-<div>&#8220;tara&#8221;:tara_fi}</div></blockquote>
-</dd></dl>
-
 </div>
 <div class="section" id="module-vcontact.pc_matrix">
 <span id="vcontact-pc-matrix-module"></span><h2>vcontact.pc_matrix module<a class="headerlink" href="#module-vcontact.pc_matrix" title="Permalink to this headline">¶</a></h2>
@@ -1016,14 +944,43 @@ compute the similarity network on the contigs and the pcs.</p>
 <dt id="vcontact.pc_matrix.PCMatrix">
 <em class="property">class </em><tt class="descclassname">vcontact.pc_matrix.</tt><tt class="descname">PCMatrix</tt><big>(</big><em>cluster_proteins</em>, <em>clusters</em>, <em>ref_proteins</em>, <em>contigs</em>, <em>contig_names=None</em><big>)</big><a class="reference internal" href="_modules/vcontact/pc_matrix.html#PCMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
-<dl class="docutils">
-<dt>Protein Cluster presence/absence matrix, or PCprofiles.</dt>
-<dd><ul class="first last simple">
-<li>Built from a protein cluster object.</li>
-<li>Usefull in network building.</li>
-</ul>
-</dd>
-</dl>
+<p>Protein Cluster presence/absence matrix, or PCprofiles.
+Used to build the similarity networks.</p>
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.contigs">
+<tt class="descname">contigs</tt><em class="property"> pandas.DataFrame</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.contigs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.features">
+<tt class="descname">features</tt><em class="property"> pandas.DataFrame</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.name">
+<tt class="descname">name</tt><em class="property"> str</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.profiles">
+<tt class="descname">profiles</tt><em class="property"> sparse.matrix</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.profiles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.singletons">
+<tt class="descname">singletons</tt><em class="property"> sparse.matrix</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.singletons" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.contig_ntw">
+<tt class="descname">contig_ntw</tt><em class="property"> sparse.matrix</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.contig_ntw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="vcontact.pc_matrix.PCMatrix.modules_ntw">
+<tt class="descname">modules_ntw</tt><em class="property"> sparse.matrix</em><a class="headerlink" href="#vcontact.pc_matrix.PCMatrix.modules_ntw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <p>Args:
 cluster_proteins: pandas dataframe with :</p>
 <blockquote>
@@ -1292,12 +1249,8 @@ pos: node position in the matrix (int)
 <li><a class="reference internal" href="#subpackages">Subpackages</a></li>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#vcontact-associations-module">vcontact.associations module</a></li>
-<li><a class="reference internal" href="#vcontact-cache-module">vcontact.cache module</a></li>
-<li><a class="reference internal" href="#module-vcontact.exports">vcontact.exports module</a></li>
-<li><a class="reference internal" href="#vcontact-feature-select-module">vcontact.feature_select module</a></li>
 <li><a class="reference internal" href="#module-vcontact.genome_clusters">vcontact.genome_clusters module</a></li>
 <li><a class="reference internal" href="#module-vcontact.genomes">vcontact.genomes module</a></li>
-<li><a class="reference internal" href="#vcontact-main-module">vcontact.main module</a></li>
 <li><a class="reference internal" href="#module-vcontact.matrices">vcontact.matrices module</a></li>
 <li><a class="reference internal" href="#module-vcontact.ml_functions">vcontact.ml_functions module</a></li>
 <li><a class="reference internal" href="#module-vcontact.modules">vcontact.modules module</a></li>

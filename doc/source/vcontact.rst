@@ -19,31 +19,6 @@ vcontact.associations module
     :undoc-members:
     :show-inheritance:
 
-
-vcontact.cache module
----------------------
-
-.. automodule:: vcontact.cache
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-vcontact.exports module
------------------------
-
-.. automodule:: vcontact.exports
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-vcontact.feature_select module
-------------------------------
-
-.. automodule:: vcontact.feature_select
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 vcontact.genome_clusters module
 -------------------------------
 
@@ -56,14 +31,6 @@ vcontact.genomes module
 -----------------------
 
 .. automodule:: vcontact.genomes
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-vcontact.main module
---------------------
-
-.. automodule:: vcontact.main
     :members:
     :undoc-members:
     :show-inheritance:

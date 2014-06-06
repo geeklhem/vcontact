@@ -1,0 +1,335 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vcontact.tests.test_genomes_clusters &mdash; vcontact beta documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     'beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="vcontact beta documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vcontact.tests.test_genomes_clusters</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="kn">as</span> <span class="nn">sparse</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">genome_clusters</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">pc_matrix</span>
+<span class="kn">from</span> <span class="nn">test_pc_matrix</span> <span class="kn">import</span> <span class="n">setup</span>
+<span class="kn">import</span> <span class="nn">pandas</span> 
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">pandas.util.testing</span> <span class="kn">as</span> <span class="nn">ptest</span>
+
+<span class="n">F</span> <span class="o">=</span> <span class="p">{}</span> <span class="c"># fixtures</span>
+<div class="viewcode-block" id="teardown"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.teardown">[docs]</a><span class="k">def</span> <span class="nf">teardown</span><span class="p">():</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&quot;mcl_results&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&quot;gc_contigsclusters_network.ntw&quot;</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&quot;gc_contigsclusters_network.info&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;File not found&quot;</span></div>
+<div class="viewcode-block" id="setup"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.setup">[docs]</a><span class="k">def</span> <span class="nf">setup</span><span class="p">():</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;network_hypergeom&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                          <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                                          <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                          <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                          <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> 
+                                                          <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]]))</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;network_hypergeom_interlink&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                                                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                                                                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> 
+                                                                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]]))</span>
+
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;mcl_results&quot;</span><span class="p">,</span><span class="s">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="p">[[</span><span class="s">&quot;c_0&quot;</span><span class="p">,</span><span class="s">&quot;c_2&quot;</span><span class="p">,</span><span class="s">&quot;c_3&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s">&quot;c_1&quot;</span><span class="p">,</span><span class="s">&quot;c_5&quot;</span><span class="p">]]:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">l</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;contigs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;name&quot;</span><span class="p">:[</span><span class="s">&quot;c_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)],</span>
+                                     <span class="s">&quot;family&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">],</span>
+                                     <span class="s">&quot;genus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">],</span> <span class="c"># contig 2 has no known genus </span>
+                                     <span class="s">&quot;origin&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;test&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">6</span><span class="p">})</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;ref_proteins&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;protein_id&quot;</span><span class="p">:[</span><span class="s">&quot;prot_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">)],</span>
+                                          <span class="s">&quot;contig&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;c_0&quot;</span><span class="p">,</span><span class="s">&quot;c_0&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;c_1&quot;</span><span class="p">,</span><span class="s">&quot;c_1&quot;</span><span class="p">,</span><span class="s">&quot;c_1&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;c_2&quot;</span><span class="p">,</span><span class="s">&quot;c_2&quot;</span><span class="p">,</span><span class="s">&quot;c_2&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;c_3&quot;</span><span class="p">,</span><span class="s">&quot;c_3&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;c_5&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;c_0&quot;</span><span class="p">],</span> <span class="c">#prot not in the clustering</span>
+                                          <span class="s">&quot;function&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;test&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">12</span><span class="p">})</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;protein_id&quot;</span><span class="p">)</span>
+     
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;cluster_proteins&quot;</span><span class="p">]</span> <span class="o">=</span>  <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;protein_id&quot;</span><span class="p">:[</span><span class="s">&quot;prot_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">11</span><span class="p">)],</span>
+                                               <span class="s">&quot;cluster&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;pc_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span>
+                                                                                       <span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span>
+                                                                                       <span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span>
+                                                                                       <span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span>
+                                                                                       <span class="mi">3</span><span class="p">]]})</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;protein_id&quot;</span><span class="p">)</span>
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;clusters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;name&quot;</span><span class="p">:[</span><span class="s">&quot;pc_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)],</span>
+                                      <span class="s">&quot;size&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">5</span><span class="p">]})</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;PCM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pc_matrix</span><span class="o">.</span><span class="n">PCMatrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;cluster_proteins&quot;</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;clusters&quot;</span><span class="p">],</span>
+                                  <span class="n">F</span><span class="p">[</span><span class="s">&quot;ref_proteins&quot;</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;contigs&quot;</span><span class="p">])</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">genome_clusters</span><span class="o">.</span><span class="n">GenomeCluster</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;PCM&quot;</span><span class="p">],</span><span class="n">mcl_file</span><span class="o">=</span><span class="s">&quot;mcl_results&quot;</span><span class="p">)</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;K_family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;K_genus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;Q_genus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]])</span>
+                                
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;R_genus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]])</span>
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;P_genus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">]])</span>
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;A_genus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                              <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="p">),</span><span class="mi">0</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)]])</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;Q_family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]])</span>
+                                
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;R_family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]])</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;P_family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]])</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;A_family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+                               <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]])</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;contigs_a&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;name&quot;</span><span class="p">:[</span><span class="s">&quot;c_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)],</span>
+                                       <span class="s">&quot;family&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">],</span>
+                                       <span class="s">&quot;genus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">],</span> <span class="c"># contig 2 has no known genus </span>
+                                       <span class="s">&quot;origin&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;test&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">6</span><span class="p">,</span>
+                                       <span class="s">&quot;pos_cluster&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                       <span class="s">&quot;membership&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]})</span>
+
+    
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;aff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;reference_family&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">],</span>
+                                 <span class="s">&quot;reference_genus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">],</span>
+                                 <span class="s">&quot;membership&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                 <span class="s">&quot;origin&quot;</span><span class="p">:[</span><span class="s">&quot;test&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span>
+                                 <span class="s">&quot;cluster_max_membership&quot;</span><span class="p">:[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                 <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;c_0&quot;</span><span class="p">,</span><span class="s">&quot;c_1&quot;</span><span class="p">,</span><span class="s">&quot;c_2&quot;</span><span class="p">,</span><span class="s">&quot;c_3&quot;</span><span class="p">,</span><span class="s">&quot;c_5&quot;</span><span class="p">],</span>
+                                 <span class="s">&quot;predicted_family&quot;</span><span class="p">:[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,],</span>
+                                 <span class="s">&quot;predicted_genus&quot;</span><span class="p">:[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,]})</span>
+    <span class="c"># --------| TP | TN | FP | FN | R | P | S | A </span>
+    <span class="c">#---------|-----------------------------------</span>
+    <span class="c"># Fam   A |  3 | 2  | 0  | 0  | 1 | 1 | 1 | 1</span>
+    <span class="c"># Fam   B |  2 | 3  | 0  | 0  | 1 | 1 | 1 | 1</span>
+    <span class="c">#---------|-----------------------------------</span>
+    <span class="c"># Genus A |  2 | 2  | 0  | 0  | 1 | 1 | 1 | 1</span>
+    <span class="c"># Genus B |  1 | 2  | 1  | 0  | 1 | .5|2/3|3/4</span>
+    <span class="c"># Genus C |  0 | 3  | 0  | 1  | 0 | 0 | 1 |3/4</span>
+    <span class="c"># SUM ----|  3 | 7  | 1  | 1  |3/4|3/4|7/8|10/12</span>
+    
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;summary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&quot;clustering_wise_precision&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.8</span><span class="p">],</span>
+                                     <span class="s">&quot;clustering_wise_recall&quot;</span><span class="p">:[</span><span class="mi">5</span><span class="o">/</span><span class="mf">6.</span><span class="p">,</span><span class="mf">0.8</span><span class="p">],</span>
+                                     <span class="s">&quot;level&quot;</span><span class="p">:[</span><span class="s">&quot;family&quot;</span><span class="p">,</span><span class="s">&quot;genus&quot;</span><span class="p">],</span>
+                                     <span class="s">&quot;name&quot;</span><span class="p">:[</span><span class="s">&quot;gc&quot;</span><span class="p">,</span><span class="s">&quot;gc&quot;</span><span class="p">],</span>
+                                     <span class="s">&quot;classes&quot;</span><span class="p">:[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>
+                                     <span class="s">&quot;contigs&quot;</span><span class="p">:[</span><span class="mi">6</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span>
+                                     <span class="s">&quot;affiliated_contigs&quot;</span><span class="p">:[</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span>
+                                     <span class="s">&quot;reference_contigs&quot;</span><span class="p">:[</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span>
+                                     <span class="s">&quot;recall_micro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="o">/</span><span class="mf">3.0</span><span class="p">],</span>
+                                     <span class="s">&quot;precision_micro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mf">1.5</span><span class="o">/</span><span class="mi">3</span><span class="p">],</span>
+                                     <span class="s">&quot;specificity_micro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">8</span><span class="o">/</span><span class="mf">9.0</span><span class="p">],</span>
+                                     <span class="s">&quot;accuracy_micro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="o">/</span><span class="mf">12.0</span><span class="p">],</span>
+                                     <span class="s">&quot;recall_macro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="o">/</span><span class="mf">4.</span><span class="p">],</span>
+                                     <span class="s">&quot;precision_macro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="o">/</span><span class="mf">4.</span><span class="p">],</span>
+                                     <span class="s">&quot;specificity_macro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">7</span><span class="o">/</span><span class="mf">8.</span><span class="p">],</span>
+                                     <span class="s">&quot;accuracy_macro&quot;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="o">/</span><span class="mf">12.0</span><span class="p">],</span>
+                                     <span class="s">&quot;origin&quot;</span><span class="p">:[</span><span class="s">&quot;origin!=&#39;refseq_jan14&#39;&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span>
+                                 <span class="p">})</span>
+    
+</div>
+<div class="viewcode-block" id="test_membership_matrix"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_membership_matrix">[docs]</a><span class="k">def</span> <span class="nf">test_membership_matrix</span><span class="p">():</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">membership_matrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mcl_results</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;network_hypergeom&quot;</span><span class="p">]),</span>
+                                      <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">],</span>
+                                      <span class="s">&quot;Membership matrix&quot;</span><span class="p">)</span></div>
+<div class="viewcode-block" id="test_ref_membership"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_ref_membership">[docs]</a><span class="k">def</span> <span class="nf">test_ref_membership</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;family&quot;</span><span class="p">,</span><span class="s">&quot;genus&quot;</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">reference_membership_matrix</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">todense</span><span class="p">(),</span>
+                                      <span class="n">F</span><span class="p">[</span><span class="s">&quot;K_&quot;</span><span class="o">+</span><span class="n">t</span><span class="p">],</span>
+                                      <span class="s">&quot;K ({} level)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="test_correspondence_matrix"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_correspondence_matrix">[docs]</a><span class="k">def</span> <span class="nf">test_correspondence_matrix</span><span class="p">():</span>
+    <span class="n">Q</span><span class="p">,</span><span class="n">R</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">A</span> <span class="o">=</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">correspondence_matrix</span><span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;K_genus&quot;</span><span class="p">]),</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;Q_genus&quot;</span><span class="p">],</span><span class="s">&quot;Q_genus&quot;</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;R_genus&quot;</span><span class="p">],</span><span class="s">&quot;R_genus&quot;</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_genus&quot;</span><span class="p">],</span><span class="s">&quot;P_genus&quot;</span><span class="p">)</span> 
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;A_genus&quot;</span><span class="p">],</span><span class="s">&quot;A_genus&quot;</span><span class="p">)</span>
+
+    <span class="n">Q</span><span class="p">,</span><span class="n">R</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">A</span> <span class="o">=</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">correspondence_matrix</span><span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;K_family&quot;</span><span class="p">]),</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;Q_family&quot;</span><span class="p">],</span><span class="s">&quot;Q&quot;</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;R_family&quot;</span><span class="p">],</span><span class="s">&quot;R&quot;</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_family&quot;</span><span class="p">],</span><span class="s">&quot;P&quot;</span><span class="p">)</span> 
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;A_family&quot;</span><span class="p">],</span><span class="s">&quot;A&quot;</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="test_cwise_genus"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_cwise_genus">[docs]</a><span class="k">def</span> <span class="nf">test_cwise_genus</span><span class="p">():</span>
+    <span class="n">pr</span> <span class="o">=</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">clustering_wise_pr</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_genus&quot;</span><span class="p">],</span>
+                                    <span class="n">F</span><span class="p">[</span><span class="s">&quot;R_genus&quot;</span><span class="p">],</span>
+                                    <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">],</span>
+                                    <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;K_genus&quot;</span><span class="p">]))</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_almost_equal</span><span class="p">(</span><span class="n">pr</span><span class="p">,[</span><span class="mf">0.8</span><span class="p">,</span><span class="mf">0.8</span><span class="p">],</span><span class="mi">2</span><span class="p">,</span><span class="s">&quot;Genus cwise P and R&quot;</span><span class="p">)</span>
+    
+    <span class="n">pr</span> <span class="o">=</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">clustering_wise_pr</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_family&quot;</span><span class="p">],</span>
+                                    <span class="n">F</span><span class="p">[</span><span class="s">&quot;R_family&quot;</span><span class="p">],</span>
+                                    <span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">],</span>
+                                    <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;K_family&quot;</span><span class="p">]))</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_almost_equal</span><span class="p">(</span><span class="n">pr</span><span class="p">,[</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">0.833</span><span class="p">],</span><span class="mi">2</span><span class="p">,</span><span class="s">&quot;Family cwise P and R&quot;</span><span class="p">)</span>
+
+    
+</div>
+<div class="viewcode-block" id="test_affiliation"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_affiliation">[docs]</a><span class="k">def</span> <span class="nf">test_affiliation</span><span class="p">():</span>
+
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">affiliate</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+    <span class="k">print</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;contigs_a&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ptest</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">contigs</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,(</span><span class="s">&#39;family&#39;</span><span class="p">,</span> <span class="s">&#39;genus&#39;</span><span class="p">,</span> <span class="s">&#39;membership&#39;</span><span class="p">,</span>
+                                                    <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;origin&#39;</span><span class="p">,</span><span class="s">&#39;pos_cluster&#39;</span><span class="p">,</span>
+                                                    <span class="p">)]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;contigs_a&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">check_dtype</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="test_associations"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_associations">[docs]</a><span class="k">def</span> <span class="nf">test_associations</span><span class="p">():</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">associations</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_family&quot;</span><span class="p">],</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;R_family&quot;</span><span class="p">],</span><span class="s">&quot;family&quot;</span><span class="p">)</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">associations</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;P_genus&quot;</span><span class="p">],</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;R_genus&quot;</span><span class="p">],</span><span class="s">&quot;genus&quot;</span><span class="p">)</span>
+    <span class="n">aff</span> <span class="o">=</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">affiliate</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;B&quot;</span><span class="p">])</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n\n</span><span class="s">&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;{:=^80}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;OUTPUT&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">aff</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n\n</span><span class="s">&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;{:=^80}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;REFERENCE&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;aff&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="n">ptest</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">aff</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(),</span>
+                             <span class="n">F</span><span class="p">[</span><span class="s">&quot;aff&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(),</span>
+                             <span class="n">check_dtype</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="test_routine"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_routine">[docs]</a><span class="k">def</span> <span class="nf">test_routine</span><span class="p">():</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">routine</span><span class="p">()</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">{:=^80}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;REFERENCE&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;summary&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(),</span>
+
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">{:=^80}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;OUTPUT&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    
+    <span class="n">ptest</span><span class="o">.</span><span class="n">assert_frame_equal</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(),</span>
+                             <span class="n">F</span><span class="p">[</span><span class="s">&quot;summary&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(),</span>
+                             <span class="n">check_dtype</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    
+
+</div>
+<div class="viewcode-block" id="test_link"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_link">[docs]</a><span class="k">def</span> <span class="nf">test_link</span><span class="p">():</span>
+    <span class="n">L</span> <span class="o">=</span>  <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">link_clusters</span><span class="p">(</span><span class="n">network</span><span class="o">=</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;network_hypergeom_interlink&quot;</span><span class="p">])</span>
+    <span class="k">print</span> <span class="n">L</span> 
+</div>
+<div class="viewcode-block" id="test_cluster_cyto"><a class="viewcode-back" href="../../../vcontact.tests.html#vcontact.tests.test_genomes_clusters.test_cluster_cyto">[docs]</a><span class="k">def</span> <span class="nf">test_cluster_cyto</span><span class="p">():</span>
+    <span class="n">F</span><span class="p">[</span><span class="s">&quot;gc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cluster_network_cytoscape</span><span class="p">(</span><span class="n">network</span><span class="o">=</span><span class="n">F</span><span class="p">[</span><span class="s">&quot;network_hypergeom_interlink&quot;</span><span class="p">])</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;gc_contigsclusters_network.ntw&quot;</span><span class="p">,</span><span class="s">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">f</span><span class="p">])</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;gc_contigsclusters_network.info&quot;</span><span class="p">,</span><span class="s">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">f</span><span class="p">])</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">vcontact beta documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Guilhem Doulcier.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
