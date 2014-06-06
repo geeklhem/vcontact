@@ -131,7 +131,9 @@ def correspondence(K, B):
     R = Q / Q_vsum
     R = np.nan_to_num(R)
 
+    # F1-measure
     F = 2 * np.divide(np.multiply(P, R), P+R)
+    F = np.nan_to_num(F)
     return Q, R, P, F
 
 def clustering_wise_metrics(P, R, B, K):
