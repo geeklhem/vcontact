@@ -181,7 +181,9 @@
     <span class="n">R</span> <span class="o">=</span> <span class="n">Q</span> <span class="o">/</span> <span class="n">Q_vsum</span>
     <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
 
+    <span class="c"># F1-measure</span>
     <span class="n">F</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">),</span> <span class="n">P</span><span class="o">+</span><span class="n">R</span><span class="p">)</span>
+    <span class="n">F</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Q</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">F</span>
 </div>
 <div class="viewcode-block" id="clustering_wise_metrics"><a class="viewcode-back" href="../../vcontact.html#vcontact.matrices.clustering_wise_metrics">[docs]</a><span class="k">def</span> <span class="nf">clustering_wise_metrics</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>

@@ -47,7 +47,260 @@
             
   <div class="section" id="vcontact-tutorial">
 <span id="tutorial"></span><h1>vContact Tutorial<a class="headerlink" href="#vcontact-tutorial" title="Permalink to this headline">¶</a></h1>
-<p>bla</p>
+<p>This tutorial explain how to analyze a virome for wich you already
+have a pc-profile. To use vContact/MCL to generate the profiles from
+the blast results see this (not written yet) <a class="reference internal" href="#tutorial"><em>protein
+clustering tutorial</em></a>.</p>
+<div class="section" id="prepare-your-data-for-input">
+<h2>Prepare your data for input<a class="headerlink" href="#prepare-your-data-for-input" title="Permalink to this headline">¶</a></h2>
+<p>You need at least a file contiaining the <em>pc-profiles</em> (association of
+contigs and clusters) and one containing information about the
+<em>contigs</em> (the number of predicted proteins is the only required
+field). You can also optionnaly provide a file describing the modules.</p>
+<p>The supported fields are :</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="17%" />
+<col width="11%" />
+<col width="52%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">File</th>
+<th class="head">Field</th>
+<th class="head">Required</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><strong>profiles</strong></td>
+<td>contig_id</td>
+<td>yes</td>
+<td>uniq contig name.</td>
+</tr>
+<tr class="row-odd"><td>&#8211;</td>
+<td>pc_id</td>
+<td>yes</td>
+<td>uniq protein cluster name.</td>
+</tr>
+<tr class="row-even"><td><strong>contigs info</strong></td>
+<td>id</td>
+<td>yes</td>
+<td>uniq contig name.</td>
+</tr>
+<tr class="row-odd"><td>&#8211;</td>
+<td>proteins</td>
+<td>yes</td>
+<td>number of protein on the contig.</td>
+</tr>
+<tr class="row-even"><td>&#8211;</td>
+<td>size</td>
+<td>no</td>
+<td>size of the contig bp.</td>
+</tr>
+<tr class="row-odd"><td>&#8211;</td>
+<td>origin</td>
+<td>no</td>
+<td>origin of the contig (defaut is filename).</td>
+</tr>
+<tr class="row-even"><td>&#8211;</td>
+<td><em>&lt;others&gt;</em></td>
+<td>no</td>
+<td>reference taxonomy.</td>
+</tr>
+<tr class="row-odd"><td><strong>pc info</strong></td>
+<td>id</td>
+<td>yes</td>
+<td>uniq protein cluster name.</td>
+</tr>
+<tr class="row-even"><td>&#8211;</td>
+<td>size</td>
+<td>no</td>
+<td>number of proteins.</td>
+</tr>
+<tr class="row-odd"><td>&#8211;</td>
+<td><em>&lt;others&gt;</em></td>
+<td>no</td>
+<td>additional description.</td>
+</tr>
+</tbody>
+</table>
+<p>Example files:</p>
+<p><cite>profiles.csv</cite></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">contig_id</th>
+<th class="head">protein_family_id</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>NC_550500</td>
+<td>PC_000001</td>
+</tr>
+<tr class="row-odd"><td>NC_550500</td>
+<td>PC_000002</td>
+</tr>
+<tr class="row-even"><td>NC_280000</td>
+<td>PC_000002</td>
+</tr>
+<tr class="row-odd"><td>NC_280000</td>
+<td>PC_000004</td>
+</tr>
+<tr class="row-even"><td>NC_280000</td>
+<td>PC_000006</td>
+</tr>
+</tbody>
+</table>
+<p><cite>contigs.csv</cite></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="17%" />
+<col width="38%" />
+<col width="27%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">contig_id</th>
+<th class="head">proteins</th>
+<th class="head">family</th>
+<th class="head">origin</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>NC_550500</td>
+<td>10</td>
+<td>Myoviridae</td>
+<td>refseq_jan14</td>
+</tr>
+<tr class="row-odd"><td>NC_280000</td>
+<td>9</td>
+<td>Myoviridae</td>
+<td>refseq_jan14</td>
+</tr>
+<tr class="row-even"><td>NC_550000</td>
+<td>55</td>
+<td>Podoviridae</td>
+<td>refseq_jan14</td>
+</tr>
+<tr class="row-odd"><td>000000001</td>
+<td>14</td>
+<td>&nbsp;</td>
+<td>myVirome</td>
+</tr>
+</tbody>
+</table>
+<p><cite>protein clusters.csv</cite></p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="58%" />
+<col width="42%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">protein_family_id</th>
+<th class="head">keywords</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>PC_000001</td>
+<td>reductase</td>
+</tr>
+<tr class="row-odd"><td>PC_000002</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>PC_000002</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>PC_000004</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>PC_000006</td>
+<td>tail</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">For a given contig, if the number of proteins in
+<cite>contigs.csv</cite> file is higher than the number of times it appears in
+the <cite>profiles.csv</cite> file, the remaining proteins are treated as
+unclustered singletons (and change the significativity in the
+similarity network). To account for multiple proteins of one
+cluster on a single contig, repeat the line in the <cite>protein.csv</cite>
+file. (It will only change the number of singletons).</p>
+</div>
+</div>
+<div class="section" id="run-the-analysis">
+<h2>Run the analysis<a class="headerlink" href="#run-the-analysis" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="simplest-way">
+<h3>Simplest way<a class="headerlink" href="#simplest-way" title="Permalink to this headline">¶</a></h3>
+<p>The main command provided by vcontact is</p>
+<div class="highlight-python"><div class="highlight"><pre>vcontact -p profiles.csv -c contigs.csv --pcs protein_clusters.csv -o output_dir
+</pre></div>
+</div>
+<p>If the output directory does not exist, it will be created. The output is structured as follow:</p>
+<div class="highlight-python"><div class="highlight"><pre>output_dir/
+      contigs.h5
+      protein_clusters.h5
+      clusters_i2_sig1.h5
+      modules_i5_sig1.h5
+      profiles.pkle
+      clusters_i2_sig1.csv
+      modules_i5_sig1.csv
+      affiliation_i2_sig1.csv
+</pre></div>
+</div>
+<p>The results are stored in the csv files and you can parse them with
+your favorite tools to visualise them. vContact provides also several
+exporting functions to speed up the process for common tools see <a class="reference internal" href="#export"><em>Exporting</em></a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>.h5</cite> (HDF5 binary files) and <cite>.pkle</cite> (Python serialized
+object) are used to speed up new computation on the same output
+directory. If they exists you do not need to precise the arguments
+<cite>-p</cite>, <cite>-c</cite> and <cite>-pcs</cite> anymore when working with the same <cite>-o</cite>.  You
+can use the option <cite>-f</cite> to force their overwriting if you have
+changed the data without changing the output directoy name.</p>
+</div>
+</div>
+<div class="section" id="change-parameters">
+<h3>Change parameters<a class="headerlink" href="#change-parameters" title="Permalink to this headline">¶</a></h3>
+<p>You can change the following parameters for the contigs clustering :</p>
+<blockquote>
+<div><ul class="simple">
+<li><cite>-i</cite> : Inflation in the MCL clustering of the contigs. (default 2)</li>
+<li><cite>-sig</cite> : Significativity threshold (default 1)</li>
+</ul>
+</div></blockquote>
+<p>For the modules:</p>
+<blockquote>
+<div><ul class="simple">
+<li><cite>&#8211;i_mod</cite> : Inflation in the MCL clustering of the modules (default 5)</li>
+<li><cite>&#8211;sig_mod</cite> : Significativity threshold</li>
+<li><cite>&#8211;shared_min</cite> : Minimal number of contigs sharing a protein cluster to be used in the modules (default 3)</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>For the linking of modules and clusters</dt>
+<dd><ul class="first last simple">
+<li><cite>&#8211;own_thres</cite> : Minimal proportion of protein cluster of the module to consider that the module is present.</li>
+<li><cite>&#8211;assoc-sig</cite> : Significativity threshold</li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="exporting">
+<span id="export"></span><h2>Exporting<a class="headerlink" href="#exporting" title="Permalink to this headline">¶</a></h2>
+<p>You ask for an export in a folder where the computation has already been done</p>
+<div class="highlight-python"><div class="highlight"><pre>vcontact -o output_dir --export cytoscape [--contigs|--clusters]
+vcontact -o output_dir --export krona [--class family,genus,origin]
+</pre></div>
+</div>
+</div>
 </div>
 
 
@@ -56,6 +309,20 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">vContact Tutorial</a><ul>
+<li><a class="reference internal" href="#prepare-your-data-for-input">Prepare your data for input</a></li>
+<li><a class="reference internal" href="#run-the-analysis">Run the analysis</a><ul>
+<li><a class="reference internal" href="#simplest-way">Simplest way</a></li>
+<li><a class="reference internal" href="#change-parameters">Change parameters</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#exporting">Exporting</a></li>
+</ul>
+</li>
+</ul>
+
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/tutorial.txt"
