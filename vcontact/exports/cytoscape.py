@@ -4,11 +4,11 @@ import logging
 from itertools import combinations
 import csv
 
-import options
 import scipy.sparse as sparse
 import numpy as np
-import pandas 
+import pandas
 
+from .. import options
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def contigs(network, contigs, clusters, path):
         clusters (list): Id of clusters to exports. 
         path (str): basename of the exported files.
 
-    Output:
+    Returns:
         tuple: Tuple of the path to the edge files and 
             nodes information files
     """
@@ -57,19 +57,22 @@ def contigs(network, contigs, clusters, path):
 
 
 
-def membership(B, contigs, clusters, clusters_list,
-                         fi,criterion="predicted_family"):
+def membership(fi, B, contigs, clusters, clusters_list=None,
+               criterion="predicted_family"):
     """Save the membership matrix in an input format for cytoscape (csv)
 
     Args:
-        B (sparse_matrix):
-        contigs (pandas.df):
-        clusters (pandas.df):
-        pos (list): 
-        criterion (str):
-        fi (str): 
+        B (sparse_matrix): Membership matrix.
+        contigs (pandas.df): Contigs informations (required columns: 
+            pos, pos_cluster).
+        clusters (pandas.df): Clusters information (required columns:  pos,
+            criterion).
+        cluster_list (list): The output is restircted to thoses clusters.
+        criterion (str): Column on wich group the membership. 
+        fi (str): Path to the output file.
     """
-    contigs = contigs.query("pos_cluster in clusters_list")
+    if clusters_list is not None:
+        contigs = contigs.query("pos_cluster in clusters_list")
     contigs.sort("pos",inplace = True)
 
     connected_clusters = [i for i,x
@@ -105,7 +108,7 @@ def clusters(cluster_network,contigs,clusters,criterion,path):
         clusters (list): Id of clusters to exports. 
         path (str): basename of the exported files.
 
-    Output:
+    Returns:
         tuple: Tuple of the path to the edge files and 
             nodes information files
     """

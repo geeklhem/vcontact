@@ -5,7 +5,7 @@ import logging
 import StringIO 
 logger = logging.getLogger(__name__)
 
-def textfile(dataframe, fi, columns=("predicted_family","predicted_genus")
+def textfile(dataframe, fi, columns=("predicted_family","predicted_genus"),
              placeholder="Non affiliated"):
     """ Write a text file from a dataframe to be used with Krona.
 
