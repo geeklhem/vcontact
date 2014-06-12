@@ -1,14 +1,14 @@
 """ Loading tools """
 import pandas
 import logging
-import scipy.sparse as sparse 
-import os 
+import scipy.sparse as sparse
+import os
 import cPickle as pickle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def csv(contigs_fi,pcs_fi,pcprofiles_fi,folder,force=False):
+def csv(contigs_fi, pcs_fi, pcprofiles_fi, folder, name, force=False):
     """
     Import csv file and build the info table and pc-profiles matrix.
     Save everything into h5 and pickle files. 
@@ -17,10 +17,11 @@ def csv(contigs_fi,pcs_fi,pcprofiles_fi,folder,force=False):
         contigs_fi (str): path to the csv file containing the contigs
         pcs_fi (str): path to the csv file containing the pcs
         pcprofiles_fi (str): path to the csv file containing the pc_profiles
-        folder (str): output folder
+        folder (str): output folder path 
+        name (str): experiment name 
         force (str): overwrite existing files
     """
-    store = pandas.HDFStore(folder+"/"+folder+".h5")
+    store = pandas.HDFStore(folder+name+".h5")
 
     if "contigs" not in store or force:
         if contigs_fi != None:
@@ -41,7 +42,7 @@ def csv(contigs_fi,pcs_fi,pcprofiles_fi,folder,force=False):
     elif "pcs" in store:
         pcs = store.pcs
         
-    if not os.path.exists(folder+"/profiles.pkle") or force:
+    if not os.path.exists(folder+"profiles.pkle") or force:
         if pcprofiles_fi is not None:
             profiles = pandas.read_csv(pcprofiles_fi,sep=None)
 
@@ -75,14 +76,15 @@ def csv(contigs_fi,pcs_fi,pcprofiles_fi,folder,force=False):
             matrix,singletons = _matrix(profiles, store.contigs, pcs)
 
             #save
+            profiles = {"matrix":matrix,"singletons":singletons}
             store.append('pcs', pcs, format='table')
-            with open(folder+"/profiles.pkle","w") as f:
-                pickle.dump({"matrix":matrix,"singletons":singletons},f)
+            with open(folder+"profiles.pkle","w") as f:
+                pickle.dump(profiles,f)
         else:
             raise ValueError("Need profiles file")
         
     else: #If the pickle file exist
-        with open(folder+"/profiles.pkle","r") as f:
+        with open(folder+"profiles.pkle","r") as f:
             profiles = pickle.load(f)
         matrix,singletons = profiles["matrix"],profiles["singletons"]
 
@@ -102,7 +104,8 @@ def csv(contigs_fi,pcs_fi,pcprofiles_fi,folder,force=False):
         logger.debug(matrix.todense())
         logger.debug(singletons.todense())
         raise ValueError("Number of contigs or pc non consistent with the profiles data")
-    
+
+    return store.pcs, store.contigs, profiles 
 
 def _matrix(profiles,contigs,pcs):
     """
@@ -137,9 +140,9 @@ def _matrix(profiles,contigs,pcs):
                             left_on="contig_id", right_on="id",
                             how="left",suffixes=["","_contig"])
     
-    profiles = profiles.loc[:,["pos_contig","pos_pc"]]
-    matrix = sparse.coo_matrix(([1]*len(profiles),(zip(*profiles.values))),
-                               shape=(len(contigs),len(pcs)),
+    profiles = profiles.loc[:,["pos_contig", "pos_pc"]]
+    matrix = sparse.coo_matrix(([1]*len(profiles), (zip(*profiles.values))),
+                               shape=(len(contigs), len(pcs)),
                                dtype="bool")
 
     return matrix.tocsr(), singletons.tocsr()

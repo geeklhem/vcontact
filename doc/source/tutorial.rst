@@ -6,7 +6,7 @@ vContact Tutorial
 This tutorial explain how to analyze a virome for wich you already
 have a pc-profile. To use vContact/MCL to generate the profiles from
 the blast results see this (not written yet) :ref:`protein
-clustering tutorial <tutorial>`.
+clustering tutorial <tutorial_pcs>`.
 
 Prepare your data for input 
 ----------------------------

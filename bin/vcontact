@@ -15,7 +15,10 @@ import pandas
 import os
 import argparse
 import vcontact.loader
-
+import vcontact.pcprofiles
+import vcontact.contig_clusters
+import vcontact.modules
+import vcontact.exports.csv
 
 # Argparse config 
 parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter,)
@@ -27,6 +30,36 @@ parser.add_argument('-p','--pcs',
                     help='Protein clusters info file (tsv or csv)',)
 parser.add_argument('-m','--pcprofiles',
                     help='Protein cluster profiles of the contigs (tsv or csv)',)
+parser.add_argument('-s','--sig',
+                    help='Sig. threshold in the contig similarity network.',
+                    default=1.0)
+parser.add_argument('-i','--inflation',
+                    help='Inflation parameter to define contig clusters with MCL.',
+                    default=2.0)
+parser.add_argument('--permissive',
+                    help="Use permissive affiliation",
+                    action="store_true")
+parser.add_argument('--mod-inflation',
+                    help='Inflation parameter to define proteins modules with MCL.',
+                    default=5.0)
+parser.add_argument('--mod-sig',
+                    help='Sig. threshold in the protein cluster similarity network.',
+                    default=1.0)
+parser.add_argument('--mod-shared-min',
+                    help=('Minimal number (inclusive) of contigs a pc must appeear into'
+                          'to be taken into account in the modules computing.'),
+                    default=3)
+parser.add_argument('--link-sig',
+                    help="Significitaivity threshold to link a cluster and a module",
+                    default=1.0)
+parser.add_argument('--link-prop',
+                    help="Proportion of a module's pc a contig must have to be considered as displaying this module.",
+                    default=0.5)
+parser.add_argument('-e','--exports',
+                    help='Export backend',
+                    nargs="*",
+                    default=["csv","krona"])
+
 parser.add_argument('-v','--verbose',
                     help='Verbosity level : -v warning, -vv info, -vvv debug, (default debug)',
                     action="count",
@@ -34,6 +67,8 @@ parser.add_argument('-v','--verbose',
 parser.add_argument('-f','--force-overwrite',
                     help='Overwrite existing files',
                     action="store_true")
+
+
 args = parser.parse_args()
 
 # Logging config
@@ -51,15 +86,46 @@ logger.debug("Arguments: {}".format(args))
 
 
 def main(args):
-    folder = args.output 
+    folder = args.output+"/"
+    name = os.path.basename(args.output)
     if not os.path.exists(folder):
         os.mkdir(folder)
         logger.info("Output directory {} created.".format(folder))
     else:
         logger.info("Using existing directory {}.".format(folder))
 
-    vcontact.loader.csv(args.contigs,args.pcs,args.pcprofiles,folder,args.force_overwrite)
+    # Loader 
+    pcs, contigs, profiles = vcontact.loader.csv(args.contigs, args.pcs,
+                                                 args.pcprofiles,
+                                                 folder, name,
+                                                 args.force_overwrite)
+    pcm = vcontact.pcprofiles.PCProfiles(pcs, contigs, profiles,
+                                         name,
+                                         args.sig, args.mod_sig, args.mod_shared_min) 
+
+    gc = vcontact.contig_clusters.ContigCluster(pcm,
+                                                inflation=args.inflation,
+                                                threshold=args.sig,
+                                                membership_simple=not args.permissive)
+
+    gc.total_affiliation()
+
+    try:
+        mod = vcontact.modules.Modules(pcm,threshold=args.mod_sig , name=name)
+    except Exception:
+        mod = None
+
+    try:
+        link = mod.link_modules_and_clusters_df(gc.clusters, gc.contigs, 
+                                                                 thres=ags.link_sig,
+                                                                 own_threshold=args.link_prop)
+    except Exception:
+        link = None
         
+    # OUTPUT
+    if csv in args.exports: 
+        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+
 if __name__ == "__main__":
     main(args)
 
