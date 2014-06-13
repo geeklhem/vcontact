@@ -30,39 +30,46 @@ class ContigCluster(object):
             mcl_results: (list of list) mcl_result[cluster][prot]
     """
     
-    def __init__(self,pcm,inflation=2,threshold=None,name=None,membership_simple=False):
+    def __init__(self,profiles,folder,inflation=2,threshold=None,name=None,membership_simple=False,):
         """
         Init the object with a pc-profile object and perform the clustering
 
         Args:
-            pcm: PCMatrix object or a tuple
+            profiles: PCprofiles object or a tuple
                  (pcs (df), contigs (df), network (sparse matrix)).
             inflation (float): inflation for mcl.
+            folder (str): path where to save files
             threshold (float): minimal significativity. 
             name (str): A name to identify the object.
             membership_simple (bool): if false use non boolean membership. 
         """
-        self.name = "gc_sig{}_mcl{}".format(threshold,inflation) if name is None else name
+        self.name = "cc_sig{}_mcl{}".format(threshold,inflation) if name is None else name
         self.inflation = inflation
         self.thres = threshold
+        self.folder = folder
 
-        if isinstance(pcm,pcprofiles.PCProfiles):
-            self.pcs = pcm.pcs.copy()
-            self.contigs = pcm.contigs.copy()
-            self.network = pcm.ntw
+        if isinstance(profiles,pcprofiles.PCProfiles):
+            self.pcs = profiles.pcs.copy()
+            self.contigs = profiles.contigs.copy()
+            self.network = profiles.ntw
         else:
-            self.pcs,self.contigs,self.network = pcm[0].copy(), pcm[1].copy(), pcm.network
+            logging.debug("Reading input from tuple")
+            self.pcs,self.contigs,self.network = profiles[0].copy(), profiles[1].copy(), profiles.network
 
         if threshold is not None:
             before = self.network.getnnz()
             self.network = self.network.multiply(self.network>=self.thres)
-            logger.debug(("Filtered {} edges according to the sig. threshold"
-                           " {}.").format(before-self.network.getnnz(), self.thres))
+            delta = before-self.network.getnnz()
+            if delta:
+                logger.debug(("Filtered {} edges according to the sig. threshold"
+                              " {}.").format(delta, self.thres))
 
-            
-        self.taxonomy = self.extract_taxonomy(self.contigs)
+        self.levels = frozenset(self.contigs.columns) - frozenset(["id","proteins","size","origin","pos"])
+        logger.debug("{} taxonomic levels detected: {}".format(len(self.levels),", ".join(self.levels)))
+        
+        self.taxonomy = self.extract_taxonomy(self.contigs,levels=self.levels)
 
-        self.clusters,self.mcl_results = self.clustering(options.data_folder+self.name,
+        self.clusters,self.mcl_results = self.clustering(self.folder+self.name,
                                                          self.inflation)
 
 
@@ -84,7 +91,7 @@ class ContigCluster(object):
     #--------------------------------------------------------------------------#
     # PART 1 : IMPORT, EXTRACTION, CLUSTERING
     #--------------------------------------------------------------------------#
-    def extract_taxonomy(self, contigs, levels=("family","genus")):
+    def extract_taxonomy(self, contigs=None, levels=None):
         """ Build the taxonomy dataframe.
 
         Args:
@@ -95,7 +102,9 @@ class ContigCluster(object):
             dict: A dictionary of pandas.DataFrame, one key by taxonomic level.
         """
         contigs = self.contigs if contigs is None else contigs
+        levels = self.levels if levels is None else levels
         tax = {}
+        
         for t in levels:
             tax[t] = pandas.DataFrame(contigs.groupby(t).pos.count(),
                                       columns=["references"])
@@ -153,14 +162,14 @@ class ContigCluster(object):
             fi (str): filename .
             names (pandas.dataframe): with the columns
                 "pos":  (int) is the position in the matrix.
-                "name": (str) column contain the name of the node.
+                "id": (str) column contain the id of the node.
                 If None, self.contigs is used.
 
         Returns:
             str: filename
         """
         names = self.contigs if names == None else names
-        names = names.set_index("pos").name
+        names = names.set_index("pos").id
         with open(fi,"wb") as f:
             matrix = sparse.dok_matrix(matrix)
             for r,c in zip(*matrix.nonzero()):
@@ -194,16 +203,19 @@ class ContigCluster(object):
         with open(fi) as f:
             c = [ line.rstrip("\n").split("\t") for line in f ]
         c = [x for x in c if len(c)>1]
-        name = ["cluster_{}".format(i) for i in range(len(c))]
+        nb_clusters = len(c)
+        formater = "CC_{{:>0{}}}".format(int(round(np.log10(nb_clusters))+1))
+        name = [formater.format(str(i)) for i in range(nb_clusters)]
+
         size = [len(i) for i in c]
-        pos = range(len(c))
+        pos = range(nb_clusters)
 
         logger.info(("{} clusters loaded (singletons and non-connected nodes "
                      "are dropped).").format(len(c)))
 
         # Update self.contigs (To refactor)
         self.contigs.reset_index(inplace=True)
-        self.contigs.set_index("name",inplace=True)
+        self.contigs.set_index("id",inplace=True)
         self.contigs["pos_cluster"] = np.nan
 
         for i,cluster in enumerate(c):
@@ -211,7 +223,7 @@ class ContigCluster(object):
                 self.contigs.loc[n,"pos_cluster"] = i
         self.contigs.reset_index(inplace=True)
 
-        return pandas.DataFrame({"name":name, "size":size,"pos":pos}),c
+        return pandas.DataFrame({"id":name, "size":size,"pos":pos}),c
 
 
     #--------------------------------------------------------------------------#
@@ -219,7 +231,7 @@ class ContigCluster(object):
     #--------------------------------------------------------------------------#
 
     
-    def total_affiliation(self,levels=("family","genus")):
+    def total_affiliation(self,levels=None):
         """Routine of the analysis using all the dataset.
         
         Args:
@@ -233,6 +245,7 @@ class ContigCluster(object):
         """
 
         results = []
+        levels = self.levels if levels is None else levels
 
         for level in levels:
             logger.info("Affiliation at the {} level...".format(level))

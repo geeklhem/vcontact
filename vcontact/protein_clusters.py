@@ -5,8 +5,6 @@ import logging
 import os
 import options
 import re 
-from genomes import pid as pid  
-import genomes
 import subprocess
 import scipy.sparse as sparse 
 import numpy as np
@@ -15,128 +13,79 @@ import cPickle as pickle
 
 logger = logging.getLogger(__name__)
 
-class ProteinClusters(object):
+
+def make_protein_clusters(blast_fi,path,inflation=2):
     """
-    A class to store protein clusters
+    Args: 
+        blast_fi (str): Blast results file
+        inflation (float): MCL's inflation
+        path (str): file basename.
+    Returns:
+        str: MCL clustering file.  
+    """
+
+    logger.debug("Generating abc file...")
+    subprocess.check_call(("awk '$1!=$2 {{print $1,$2,$11}}' {0} "
+                           "> {1}.abc").format(blast_fi,path),shell=True)
+    logger.debug("Running MCL...")
+    subprocess.check_call(("mcxload -abc  {0}.abc --stream-mirror "
+                           "--stream-neg-log10 -stream-tf 'ceil(200)' " 
+                           "-o {0}.mci -write-tab {0}_mcxload.tab "
+                           "").format(path),shell=True)
+    subprocess.check_call(("mcl {0}.mci -I {1} -use-tab "
+                           "{0}_mcxload.tab -o {0}.clusters").format(path,inflation),shell=True)
+
+    return path+".clusters"
+
+
+def load_clusters(fi,proteins):
+    """
+    Load given clusters file
+    
+    Args:
+        fi (str): path to clusters file
+        proteins (dataframe): A dataframe giving the protein and its contig.
+    Returns: 
+        tuple: dataframe proteins and dataframe clusters
     """
     
-    def __init__(self,clusters_fi,keys=False):
-        """
-        Initialise the onject with a cluster file.
+    # Read MCL
+    with open(fi) as f:
+            c = [ line.rstrip("\n").split("\t") for line in f ]
+    c = [x for x in c if len(c)>1]
+    nb_clusters = len(c)
+    formater = "PC_{{:>0{}}}".format(int(round(np.log10(nb_clusters))+1))
+    name = [formater.format(str(i)) for i in range(nb_clusters)]
+    size = [len(i) for i in c]
+    clusters = pandas.DataFrame({"size":size,"id":name}).set_index("id")
+    
+    # Assign each prot to its cluster 
+    proteins = proteins.set_index("id")
+    for prots,clust in zip(c,name):
+        proteins.loc[prots,"cluster"] = clust 
 
-        Args:
-            cluster_fi (str): path to clusters file
-            keys (bool): parse the functions of the proteins in each cluster.
-        """
-        self.fi = clusters_fi
-        self.data,self.key_matrix = self.load_clusters(clusters_fi,keys)
+    # Keys
+    for clust,prots in proteins.groupby("cluster"):
+        clusters.loc[clust,"annotated"] = prots.keywords.count()
+        if prots.keywords.count():
+            keys = ";".join(prots.keywords.dropna().values).split(";")
+            key_count = {}
+            for k in keys:
+                k = k.strip()
+                try:
+                    key_count[k] += 1
+                except KeyError:
+                    key_count[k] = 1
+            clusters.loc[clust,"keys"] = "; ".join(["{} ({})".format(x,y) for x,y in key_count.items()])
 
-    def __repr__(self):
-        return "Protein clusters extracted from {}.".format(os.path.basename(self.fi))
-
-    def __len__(self):
-        return len(self.data.clusters)
-
-    def load_clusters(self,fi,keys):
-        """
-        Load given clusters file
-        
-        Args:
-            fi (str): path to clusters file
-            keys (bool): parse the functions of the proteins in each cluster
-        
-        Returns: 
-            pandas.HDF5Store: containing the dataframe proetin and clusters.
-
-        Warning:
-            The function is painfully slow with keys=True. I'm not sure why and I
-            do not have the time to optimize it. It is probably easy to fix though.
-        """
-        
-        g = genomes.Genomes(True,False)
-        dataframe_prot = g.data.proteins.copy()
-        
-        dataframe_prot["anotated"] = [True   if (not len(func) == 0
-                                                   and not re.match("[0-9]*ORF[0-9]+",func,flags=re.IGNORECASE) 
-                                                   and not re.match("gp[0-9]+",func,flags=re.IGNORECASE) 
-                                                   and not re.match("hypothetical",func,flags=re.IGNORECASE))
-                                        else False
-                                        for func
-                                        in dataframe_prot.function]
-        dataframe_prot = dataframe_prot.query("anotated==True")
-        lenanot = float(len(dataframe_prot))
-        
-        logger.info("{} annotated proteins".format(lenanot))
-
-        h5_name = ''.join(os.path.basename(fi).split(".")[:-1])+".h5"
-        keyfile = options.cache_folder+''.join(os.path.basename(fi).split(".")[:-1])+"_keywords.pkle"
-        store =  pandas.HDFStore(options.cache_folder+h5_name)
-        
-        if "proteins" not in store or "clusters" not in store or (keys and not os.path.exists(keyfile)):
-            keywords = pandas.DataFrame({"pos":range(len(options.keywords)),"keyword":options.keywords})
-            key_count = np.zeros(len(options.keywords))
-            queries = zip(keywords.pos,keywords.keyword)
-         
-            proteins = {"protein_id":[],
-                        "cluster":[]}
-            clusters = {"size":[],
-                        "name":[],
-                        "annotated":[]}
-            
-            jj,jjj = 0,0
-
-            with open(fi) as f:
-                nb_clusters = len(f.readlines())
-                f.seek(0)
-                key_matrix = sparse.lil_matrix((len(keywords),nb_clusters))
-
-                
-                for C,l in enumerate(f):
-                    l = l.split()
-                    if len(l) > 1: # drop the singletons
-                        clusters["name"].append("pc_{}".format(C))
-                        clusters["size"].append(len(l))
-                        clusters["annotated"].append(0)
-                        proteins["cluster"] += ["pc_{}".format(C)] * len(l)
-                        try :
-                            proteins["protein_id"] += [pid(prot) for prot in l]
-                        except AttributeError as e:
-                            logger.error(prot)
-                            raise
-
-                        if keys:
-                            ### Keyword count                    
-                            for prot in l:
-                                jjj +=1
-                                if jjj%1000==0:
-                                    logger.debug("{:.1%}, {:7}/582865 ({:.2%} of the anotated) | cluster {:6}/{:6}".format(jjj/582865.,
-                                                                                                                    jjj,
-                                                                                                                    jj/lenanot,
-                                                                                                                    C,
-                                                                                                                    nb_clusters))
-                                if pid(prot) in dataframe_prot.index:
-                                    jj +=1
-                                    func = str(g.data.proteins.ix[pid(prot),"function"])
-                                    clusters["annotated"][-1] += 1
-                                    for pos_key,query_key in queries:
-                                        if func.find(query_key) != -1:
-                                            key_matrix[pos_key,C] += 1
-                                            key_count[pos_key] +=1
-            if keys:
-                with open(keyfile,"w") as f:
-                    pickle.dump(key_matrix,f)
-                    logger.info("{} proteins, {} annotated.".format(jjj,jj,np.sum(clusters["annotated"])))
-                    keywords["count"] = key_count 
-                    store.append("keywords",keywords,format="table")
-                    
-            store.append("proteins",pandas.DataFrame(proteins).set_index("protein_id"), format="table")
-            store.append("clusters",pandas.DataFrame(clusters).set_index("name"), format="table")
-        else:
-            try:
-                with open(keyfile,"r") as f:
-                    key_matrix = pickle.load(f)
-            except Exception:
-                key_matrix = None
-                logger.debug("No keyword matrix found")
-        return store,key_matrix
+    proteins.reset_index(inplace=True)
+    clusters.reset_index(inplace=True)
+    profiles = proteins.loc[:,["contig","cluster"]].drop_duplicates()
+    profiles.columns = ["contig_id","pc_id"]
+    contigs = pandas.DataFrame(proteins.fillna(0).groupby("contig").count().contig)
+    contigs.index.name = "id"
+    contigs.columns=["proteins"]
+    contigs.reset_index(inplace=True)
+    
+    return proteins,clusters,profiles,contigs
 

@@ -55,7 +55,8 @@ class PCProfiles(object):
         self.sig = sig
         self.sig_mod = sig_mod
         self.mod_shared_min = mod_shared_min
-
+        
+        
         # Copute the networks 
         self.ntw = self.network(self.matrix,self.singletons,thres=sig)
         self.ntw_modules = self.network_modules(self.matrix,
@@ -98,6 +99,7 @@ class PCProfiles(object):
         # Number of protein clusters in each contig
         # = # shared pcs + #singletons
         number_of_pc = matrix.sum(1) + singletons
+        number_of_pc = number_of_pc.A1 #Transform into a flat array
 
         # Number of common protein clusters between two contigs
         commons_pc = matrix.dot(sparse.csr_matrix(matrix.transpose(),dtype=int))
@@ -107,7 +109,6 @@ class PCProfiles(object):
         # Display
         i = 0
         total_c = float(commons_pc.getnnz())
-
         for A,B in zip(*commons_pc.nonzero()) : #For A & B sharing contigs
             if A != B:
                 # choose(a, k) * choose(C - a, b - k) / choose(C, b)
@@ -116,21 +117,26 @@ class PCProfiles(object):
                 # It is symmetric but I put the smallest before to avoid numerical bias.
                 a,b = sorted([number_of_pc[A], number_of_pc[B]])
                 pval = stats.hypergeom.sf(commons_pc[A,B]-1,pcs,a, b)
-                sig = np.nan_to_num(-np.log10(pval)-logT)
-
+                sig = min(300,np.nan_to_num(-np.log10(pval)-logT))
                 if sig>thres:
                     S[min(A,B),max(A,B)] = sig
-
                 # Display
                 i += 1
                 if i%1000 == 0:
                     sys.stdout.write(".")
                 if i%10000 == 0:
                     sys.stdout.write("{:6.2%} {}/{}\n".format(i/total_c,i,total_c))
-
-        logger.debug("Hypergeometric similarity network : {0} genomes, {1} edges".format(contigs,S.getnnz()))
         S += S.T # Symmetry
-
+        S = S.tocsr()
+        if len(S.data) != 0:
+            logger.debug(("Hypergeometric contig-similarity network : {0} contigs, "
+                          "{1} edges (min:{2:.2} max: {3:.2}, threshold was {4})").format(contigs,
+                                                                                          S.getnnz(),
+                                                                                          S.data.min(),
+                                                                                          S.data.max(),
+                                                                                          thres))
+        else:
+            raise ValueError("No edge in the similarity network !") 
         return S
 
 
@@ -164,7 +170,7 @@ class PCProfiles(object):
         # We only keep the pcs that are presents in more than "mod_shared_min" contigs
         pos_pcs_in_modules = [i for i,x in enumerate(number_of_contigs) if x>=mod_shared_min]
         pcs_in_modules = len(pos_pcs_in_modules)
-        logger.info("{} pc present in strictly more than 2 contigs".format(pcs_in_modules))
+        logger.debug("{} pc present in strictly more than {} contigs".format(pcs_in_modules,mod_shared_min))
 
         # Filtering the matrix
         matrix = matrix[:,pos_pcs_in_modules]
@@ -188,7 +194,7 @@ class PCProfiles(object):
 
                 a,b = sorted([number_of_contigs[A], number_of_contigs[B]])
                 pval = stats.hypergeom.sf(commons_contigs[A,B]-1,contigs,a, b)
-                sig = np.nan_to_num(-np.log10(pval)-logT)
+                sig = min(300,np.nan_to_num(-np.log10(pval)-logT))
 
 
                 if sig>thres:
@@ -200,7 +206,7 @@ class PCProfiles(object):
                 if i%10000 == 0:
                     sys.stdout.write("{:6.2%} {}/{}\n".format(i/total_c,i,total_c))
 
-        logger.debug("Hypergeometric similarity network : {0} pcs, {1} edges".format(pcs_in_modules,S.getnnz()))
+        logger.debug("Hypergeometric pcs-similarity network : {0} pcs, {1} edges".format(pcs_in_modules,S.getnnz()))
         S += S.T # Symmetry
 
         return S

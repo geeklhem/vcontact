@@ -11,35 +11,43 @@ import numpy as np
 import scipy.sparse as sparse
 import scipy.stats as stats
 
-import pc_matrix
+import pcprofiles
 import options
 
 logger = logging.getLogger(__name__)
 
 class Modules(object):
-    def __init__(self,pcm,threshold=10,name=None,keyword_matrix_file=None):
+    def __init__(self,profiles,folder,inflation=5,threshold=10,
+                 shared_min=3,
+                 name=None, keyword_matrix_file=None):
         """
 
         Args:
-            pcm: PCMatrix object or a tuple:
+            profiles: PCProfiles object or a tuple:
                  (features (df), contigs (df),
                   pc similirity-network (sp.matrix), pc-profiles (sp.matrix)).
             threshold: (int) Minimal sig value to take into account an edge.
             name: (str) A name to identify the object.
+            folder (str): path where to save files to. 
         """
 
         self.thres = threshold
-        self.name = "mod_sig{}".format(threshold) if name is None else name
-
-        if isinstance(pcm,pc_matrix.PCMatrix):
-            self.features = pcm.features
-            self.contigs = pcm.contigs
-            self.network = pcm.ntw_modules
-            self.matrix = pcm.matrix
+        self.name = "mod_sig{}_i{}".format(threshold,inflation) if name is None else name
+        self.folder = folder
+        self.inflation = inflation
+        self.shared_min = shared_min
+        
+        if isinstance(profiles,pcprofiles.PCProfiles):
+            self.pcs = profiles.pcs.copy()
+            self.contigs = profiles.contigs.copy()
+            self.network = profiles.ntw_modules
+            self.matrix = profiles.matrix 
         else:
-            self.features,self.contigs,self.network,self.matrix = pcm
-
-        self.features = self.features.copy()
+            logging.debug("Reading input from tuple")
+            self.pcs,self.contigs,self.network,self.matrix = (profiles[0].copy(),
+                                                              profiles[1].copy(),
+                                                              profiles[2],
+                                                              profiles[3])
 
         # Filter the network according to the threshold:
         before = self.network.getnnz()
@@ -48,24 +56,24 @@ class Modules(object):
                        " {}.").format(before-self.network.getnnz(), self.thres))
 
         # Define the modules
-        self.modules = self.define_modules(self.network)
+        self.modules = self.define_modules(self.network,self.inflation)
         self.matrix_module = self.module_in_contigs()
 
         if keyword_matrix_file is not None:
-            self.modules = self.load_keywords(keyword_matrix_file,self.modules,self.features)      
+            self.modules = self.load_keywords(keyword_matrix_file,self.modules,self.pcs)      
                 
     def __repr__(self):
         return ("Modules object {}, {} modules, (contigs, pc) : {},"
                 "sig. threshold {} ").format(self.name, len(self.modules),
                                              self.matrix.shape, self.thres)
 
-    def load_keywords(self,fi,modules,features):
+    def load_keywords(self,fi,modules,pcs):
         """ Load the keywords for each modules 
 
         Args: 
             fi (str): a file containing the pickled keyword matrix
             modules (dataframe): informations about the modules.
-            features (dataframe): informations about the protein clusters.
+            pcs (dataframe): informations about the protein clusters.
 
         Returns:
             dataframe: the dataframe module with the "keys" column added.
@@ -76,7 +84,7 @@ class Modules(object):
 
         modules.sort("pos",inplace=True)
         
-        for mod, data in features.groupby("module"):
+        for mod, data in pcs.groupby("module"):
             count = keyword_matrix[:,data.pos.values].sum(1)
             keys = [(k,int(count[n]))
                    for n,k in enumerate(options.keywords) if count[n]]
@@ -84,7 +92,7 @@ class Modules(object):
             modules.ix[mod,"keys"] = ", ".join(["{} ({})".format(x[0],x[1]) for x in keys])
         return modules
 
-    def define_modules(self,matrix,I=5):
+    def define_modules(self,matrix,I):
         """
         Save the pc network in a file ready for MCL
         Run MCL
@@ -97,32 +105,32 @@ class Modules(object):
 
         Returns:
             A dataframe containing:
-                name: the name of the module.
+                id: the id of the module.
                 size: the number of protein clusters in the module.
                 pos: the position of the module in the matrix.
                 proteins: the number of proteins in the module.
                 annotated_proteins: the number of annotated proteins in the module.
 
         Side-Effects:
-            self.features: Add the column "module".
+            self.pcs: Add the column "module".
 
         Saved Files:
             name.ntwk: The pc similarity network.
             name_mcl_I.clusters: mcl results.
             name_mcl_I_modules.pandas: the module dataframe.
-            name_mcl_I_features.pandas: the pc dataframe.
+            name_mcl_I_pcs.pandas: the pc dataframe.
         """
 
-        basename = options.folders["modules"]+self.name
+        basename = self.folder+self.name
         fi_in = basename+".ntwk"
         fi_out = basename+"_mcl_{}.clusters".format(I)
         fi_dataframe = basename+"_mcl_{}_modules.pandas".format(I)
-        fi_feat = basename+"_mcl_{}_features.pandas".format(I)
+        fi_feat = basename+"_mcl_{}_pcs.pandas".format(I)
 
 
         # Save for MCL
         logger.info("Exporting the pc-network for mcl")
-        names = self.features.set_index("pos").name 
+        names = self.pcs.set_index("pos").id 
         if not os.path.exists(fi_in):
             with open(fi_in,"wb") as f:
                 matrix = sparse.dok_matrix(matrix)
@@ -154,38 +162,40 @@ class Modules(object):
             with open(fi_out) as f:
                 c = [ line.rstrip("\n").split("\t")
                       for line in f]
-            c = [x for x in c if len(x) > 1] # Drop singletons 
-            name = ["module_{}".format(i) for i in range(len(c))]
+            c = [x for x in c if len(x) > 1] # Drop singletons
+            nb_modules = len(c)
+            formater = "MD_{{:>0{}}}".format(int(round(np.log10(nb_modules))+1))
+            name = [formater.format(i) for i in range(nb_modules)]
             size = [len(i) for i in c]
-            pos = range(len(c))
-            proteins = np.zeros(len(c))
-            annotated_proteins = np.zeros(len(c))
+            pos = range(nb_modules)
+            proteins = np.zeros(nb_modules)
+            annotated_proteins = np.zeros(nb_modules)
 
-            self.features = self.features.reset_index().set_index("name")
-            self.features["module"] = np.nan
+            self.pcs = self.pcs.reset_index().set_index("id")
+            self.pcs["module"] = np.nan
 
             for i,cluster in enumerate(c):
                 for n in cluster:
-                    self.features.loc[n,"module"] = i
-                    proteins[i] += self.features.loc[n,"size"]
-                    annotated_proteins[i] += self.features.loc[n,"annotated"] 
-            self.features.dropna(subset=["module"],inplace=True)
+                    self.pcs.loc[n,"module"] = i
+                    proteins[i] += self.pcs.loc[n,"size"]
+                    annotated_proteins[i] += self.pcs.loc[n,"annotated"] 
+            self.pcs.dropna(subset=["module"],inplace=True)
             
             
-            dataframe = pandas.DataFrame({"name":name,
+            dataframe = pandas.DataFrame({"id":name,
                                           "size":size,
                                           "pos":pos,
                                           "proteins":proteins,
                                           "annotated_proteins":annotated_proteins})
             dataframe.to_pickle(fi_dataframe)
-            self.features.to_pickle(fi_feat)
+            self.pcs.to_pickle(fi_feat)
             logger.debug(("Saving {} modules containing {} "
                           " protein clusters in {}.").format(len(name),
                                                              sum(size),
                                                              fi_dataframe))
         else:
             dataframe = pandas.read_pickle(fi_dataframe)
-            self.features = pandas.read_pickle(fi_feat)
+            self.pcs = pandas.read_pickle(fi_feat)
             logger.debug("Read {} modules from {}.".format(len(dataframe),
                                                             fi_dataframe))
         return dataframe
@@ -213,7 +223,7 @@ class Modules(object):
 
         # Number of pcs of module m in each contig.
         N = sparse.lil_matrix((len(self.contigs),len(self.modules)))
-        for m,data in self.features.reset_index().groupby("module"):
+        for m,data in self.pcs.reset_index().groupby("module"):
             pos = data.pos.values
             N[:,m] = matrix[:,pos].sum(1)
 
@@ -272,12 +282,12 @@ class Modules(object):
         a_values = clusters.sort("pos").size.values
 
         # Phage displaying a given module
-        b_values = np.squeeze(np.asarray(np.transpose(matrix_modules.sum(0))))
+        b_values = matrix_modules.sum(0).A1
 
 
         # contig in cluster
         xy = contigs.reset_index().ix[:,["pos_cluster","pos"]].dropna(subset=["pos_cluster"]).sort("pos").values
-        #print xy
+        
         pa_matrix = sparse.coo_matrix( ([1]*len(xy), zip(*xy) ),
                                        shape=(nb_clusters,nb_contigs) )
 
@@ -287,14 +297,14 @@ class Modules(object):
 
         # Number of comparisons
         logT = np.log10(nb_clusters*nb_modules)
-
+        
         S = sparse.lil_matrix((nb_clusters,nb_modules))
         for A,B in zip(*c_values.nonzero()) :
             # choose(a, k) * choose(C - a, b - k) / choose(C, b)
             # sf(k) = survival function = 1 -cdf(k) = 1 - P(x<k) = P(x>k)
             # sf(k-1)= P(x>k-1) = P(x>=k)
             pval = stats.hypergeom.sf(c_values[A,B]-1,nb_contigs,a_values[A], b_values[B])
-            sig = np.nan_to_num(-np.log10(pval)-logT)
+            sig = min(300,np.nan_to_num(-np.log10(pval)-logT))
             if sig>thres:
                 S[A,B] = sig
         logger.info("Network done {0[0]} clusters, {0[1]} modules and {1} edges.".format(S.shape,S.getnnz()))

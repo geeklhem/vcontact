@@ -8,4 +8,12 @@ setup(name='vcontact',
       long_description=open('README').read(),
       author_email='guilhem.doulcier@ens.fr',
       license='GPLv3',
-      packages=['vcontact'],)
+      packages=['vcontact'],
+      install_requires=[
+        'networkx',
+        'numpy',
+        'scipy',
+        'pandas',
+        'sklearn'
+      ],
+)

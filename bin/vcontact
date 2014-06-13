@@ -23,38 +23,49 @@ import vcontact.exports.csv
 # Argparse config 
 parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter,)
 parser.add_argument('output',
-                    help='Output directory')
+                    help='Output directory',
+                    type=str)
 parser.add_argument('-c','--contigs',
-                    help='Contig info file (tsv or csv)',)
+                    help='Contig info file (tsv or csv)',
+                    type=str)
 parser.add_argument('-p','--pcs',
-                    help='Protein clusters info file (tsv or csv)',)
+                    help='Protein clusters info file (tsv or csv)',
+                    type=str)
 parser.add_argument('-m','--pcprofiles',
-                    help='Protein cluster profiles of the contigs (tsv or csv)',)
+                    help='Protein cluster profiles of the contigs (tsv or csv)',
+                    type=str)
 parser.add_argument('-s','--sig',
                     help='Sig. threshold in the contig similarity network.',
-                    default=1.0)
+                    default=1.0,
+                    type=float)
 parser.add_argument('-i','--inflation',
                     help='Inflation parameter to define contig clusters with MCL.',
-                    default=2.0)
+                    default=2.0,
+                    type=float)
 parser.add_argument('--permissive',
                     help="Use permissive affiliation",
                     action="store_true")
 parser.add_argument('--mod-inflation',
                     help='Inflation parameter to define proteins modules with MCL.',
-                    default=5.0)
+                    default=5.0,
+                    type=float)
 parser.add_argument('--mod-sig',
                     help='Sig. threshold in the protein cluster similarity network.',
-                    default=1.0)
+                    default=1.0,
+                    type=float)
 parser.add_argument('--mod-shared-min',
                     help=('Minimal number (inclusive) of contigs a pc must appeear into'
                           'to be taken into account in the modules computing.'),
-                    default=3)
+                    default=3,
+                    type=int)
 parser.add_argument('--link-sig',
                     help="Significitaivity threshold to link a cluster and a module",
-                    default=1.0)
+                    default=1.0,
+                    type=float)
 parser.add_argument('--link-prop',
                     help="Proportion of a module's pc a contig must have to be considered as displaying this module.",
-                    default=0.5)
+                    default=0.5,
+                    type=float)
 parser.add_argument('-e','--exports',
                     help='Export backend',
                     nargs="*",
@@ -73,6 +84,11 @@ args = parser.parse_args()
 
 # Logging config
 log_levels = [logging.WARNING,logging.INFO,logging.DEBUG]
+
+logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+logging.addLevelName( logging.INFO, "\033[1;42m%s\033[1;0m" % logging.getLevelName(logging.INFO))
+logging.addLevelName( logging.DEBUG, "\033[1;43m%s\033[1;0m" % logging.getLevelName(logging.DEBUG))
 
 # create logger with 'spam_application'
 logger = logging.getLogger('vcontact')
@@ -94,36 +110,59 @@ def main(args):
     else:
         logger.info("Using existing directory {}.".format(folder))
 
-    # Loader 
+    # Loader
+    print("\n\n"+"{:-^80}".format("Loading data"))
     pcs, contigs, profiles = vcontact.loader.csv(args.contigs, args.pcs,
                                                  args.pcprofiles,
                                                  folder, name,
                                                  args.force_overwrite)
-    pcm = vcontact.pcprofiles.PCProfiles(pcs, contigs, profiles,
+    #logger.debug(("\nPCS:\n {}\n Contigs:\n {} "
+    #              "\n Profiles:\n {} \n Singletons:\n {}").format(pcs,
+    #                                                              contigs,
+    #                                                              profiles["matrix"].todense(),
+    #                                                              profiles["singletons"].todense()))
+    
+    print("\n\n"+"{:-^80}".format("Similarity network"))
+    
+    pcm = vcontact.pcprofiles.PCProfiles(contigs,pcs, profiles,
                                          name,
-                                         args.sig, args.mod_sig, args.mod_shared_min) 
-
-    gc = vcontact.contig_clusters.ContigCluster(pcm,
-                                                inflation=args.inflation,
-                                                threshold=args.sig,
-                                                membership_simple=not args.permissive)
-
-    gc.total_affiliation()
-
+                                         args.sig, args.mod_sig, args.mod_shared_min)
+    logger.debug("Network Contigs:\n {}".format(pcm.ntw.todense()))
+    print("\n\n"+"{:-^80}".format("Contig clustering & Affiliation"))
     try:
-        mod = vcontact.modules.Modules(pcm,threshold=args.mod_sig , name=name)
-    except Exception:
-        mod = None
+        gc = vcontact.contig_clusters.ContigCluster(pcm, folder,
+                                                    inflation=args.inflation,
+                                                    threshold=args.sig,
+                                                    membership_simple=not args.permissive)
+        if len(gc.levels):
+            quality = gc.total_affiliation()
+            logger.info(quality)
+    except Exception as e:
+        gc = None
+        logger.error("Error in contig clustering")
+        logger.exception(e)
 
+    print("\n\n"+"{:-^80}".format("Protein modules"))
+    try:
+        mod = vcontact.modules.Modules(pcm,folder,threshold=args.mod_sig,
+                                       inflation=args.mod_inflation,shared_min=args.mod_shared_min)
+    except Exception as e:
+        mod = None
+        logger.error("Error in protein module computation")
+        logger.exception(e)
+
+    print("\n\n"+"{:-^80}".format("Link modules and clusters"))
     try:
         link = mod.link_modules_and_clusters_df(gc.clusters, gc.contigs, 
-                                                                 thres=ags.link_sig,
+                                                                 thres=args.link_sig,
                                                                  own_threshold=args.link_prop)
-    except Exception:
+    except Exception as e:
         link = None
+        logger.error("Error in linking modules and clusters")
+        logger.exception(e)
         
     # OUTPUT
-    if csv in args.exports: 
+    if "csv" in args.exports: 
         vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
 
 if __name__ == "__main__":

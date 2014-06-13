@@ -18,16 +18,16 @@ def complete(folder, pcm=None,gc=None,mod=None,link=None):
             permissive = ""
 
         filename = "sig{}_mcl{}{}".format(gc.thres,gc.inflation,permissive)
-        gc.contigs.to_csv(folder+filename+"_contigs.csv")
-        gc.clusters.to_csv(folder+filename+"_clusters.csv")
+        gc.contigs.to_csv(folder+filename+"_contigs.csv",index=False)
+        gc.clusters.to_csv(folder+filename+"_clusters.csv",index=False)
 
     if mod is not None:
         filename = "sig{}_mcl{}_minshared{}".format(mod.thres,mod.inflation,mod.shared_min)
-        mod.modules.to_csv(folder+filename+"_modules.csv")
+        mod.modules.to_csv(folder+filename+"_modules.csv",index=False)
 
     if link is not None:
         filename = "sig{}_mcl{}_modsig{}_modmcl{}_minshared{}".format(gc.thres,gc.inflation,mod.thres,mod.inflation,mod.shared_min)
-        link.to_csv(folder+filename+"_link_mod_cluster.csv")
+        link.to_csv(folder+filename+"_link_mod_cluster.csv",index=False)
 
 def summary(folder, gc=None, pcm=None, category="refseq_jan14"):
     
@@ -64,11 +64,16 @@ def summary(folder, gc=None, pcm=None, category="refseq_jan14"):
         commons_pcs = int(np.dot(np.asarray((np.asarray(pcm.matrix[pos_refseq,:].tocsc().sum(0))>0),dtype=int),
                                  np.asarray(np.transpose((np.asarray(pcm.matrix[pos_tara,:].tocsc().sum(0))>0)),dtype=int)
                              ))
-        print(("{tot} shared PCs (+ {sing}, for a total of {all}): "
+        print(("{tot} shared PCs (+ {sing}, for a total of {allpcs}): "
                "{nb_cat} pcs in {cat} sequences and "
                "{nb_ncat} pcs in a non {cat} sequences "
                "and {common} in common").format(nb_cat=refseq_pcs,
-                                                nb_ncat=tara_pcs,commons_pcs))
+                                                nb_ncat=tara_pcs,
+                                                common=commons_pcs,
+                                                tot=pcm.matrix.shape[1],
+                                                sing=pcm.singletons.sum(),
+                                                allpcs=pcm.matrix.shape[1]+pcm.singletons.sum(),
+                                                cat=category))
             
     with open(folder+"sig{}_mcl{}{}".format(gc.thres,gc.inflation,permissive),"w") as f:
         f.write("\n".join(output))
