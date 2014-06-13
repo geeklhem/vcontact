@@ -55,3 +55,12 @@ doc/build/
 /bin/testpcs_profiles.csv
 /bin/testpcs_proteins.csv
 
+/doc/source/_static/example_files/TESTPCS.abc
+/doc/source/_static/example_files/TESTPCS.clusters
+/doc/source/_static/example_files/TESTPCS.mci
+/doc/source/_static/example_files/TESTPCS_contigs.csv
+/doc/source/_static/example_files/TESTPCS_mcxload.tab
+/doc/source/_static/example_files/TESTPCS_pcs.csv
+/doc/source/_static/example_files/TESTPCS_profiles.csv
+/doc/source/_static/example_files/TESTPCS_proteins.csv
+/doc/source/_static/example_files/test_output/
