@@ -9,6 +9,7 @@ setup(name='vcontact',
       author_email='guilhem.doulcier@ens.fr',
       license='GPLv3',
       packages=['vcontact'],
+      scripts=['bin/vcontact','bin/vcontact-pcs'],
       install_requires=[
         'networkx',
         'numpy',
