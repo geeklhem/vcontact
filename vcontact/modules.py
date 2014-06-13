@@ -12,14 +12,14 @@ import scipy.sparse as sparse
 import scipy.stats as stats
 
 import pcprofiles
-import options
+
 
 logger = logging.getLogger(__name__)
 
 class Modules(object):
     def __init__(self,profiles,folder,inflation=5,threshold=10,
                  shared_min=3,
-                 name=None, keyword_matrix_file=None):
+                 name=None):
         """
 
         Args:
@@ -59,38 +59,11 @@ class Modules(object):
         self.modules = self.define_modules(self.network,self.inflation)
         self.matrix_module = self.module_in_contigs()
 
-        if keyword_matrix_file is not None:
-            self.modules = self.load_keywords(keyword_matrix_file,self.modules,self.pcs)      
-                
     def __repr__(self):
         return ("Modules object {}, {} modules, (contigs, pc) : {},"
                 "sig. threshold {} ").format(self.name, len(self.modules),
                                              self.matrix.shape, self.thres)
 
-    def load_keywords(self,fi,modules,pcs):
-        """ Load the keywords for each modules 
-
-        Args: 
-            fi (str): a file containing the pickled keyword matrix
-            modules (dataframe): informations about the modules.
-            pcs (dataframe): informations about the protein clusters.
-
-        Returns:
-            dataframe: the dataframe module with the "keys" column added.
-        """
-        
-        with open(fi,"r") as f:
-            keyword_matrix = pickle.load(f)            
-
-        modules.sort("pos",inplace=True)
-        
-        for mod, data in pcs.groupby("module"):
-            count = keyword_matrix[:,data.pos.values].sum(1)
-            keys = [(k,int(count[n]))
-                   for n,k in enumerate(options.keywords) if count[n]]
-            keys.sort(reverse=True, key=lambda x:x[1])
-            modules.ix[mod,"keys"] = ", ".join(["{} ({})".format(x[0],x[1]) for x in keys])
-        return modules
 
     def define_modules(self,matrix,I):
         """

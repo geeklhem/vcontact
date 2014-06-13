@@ -93,7 +93,7 @@ def membership(fi, B, contigs, clusters, clusters_list=None,
         for n,l in contigs.iterrows():
             f.write("{0}\t ".format(l["name"]))
             f.write("\t".join([str(l[g]) for g in groups]))
-            f.write('\t piechart: attributelist="{0}" showlabels=false colorlist="{1}"'.format(",".join(groups),",".join([options.colors[g] if g in options.colors else options.colors["pink"] for g in groups])))
+            f.write('\t piechart: attributelist="{0}" showlabels=false colorlist="{1}"'.format(",".join(groups),",".join([options.COLORS[g] if g in options.COLORS else options.COLORS["pink"] for g in groups])))
             f.write("\n")
     logger.debug("Wrote {} lines in {}".format(n,fi))
 

@@ -3,7 +3,6 @@
 import pandas
 import logging
 import os
-import options
 import re 
 import subprocess
 import scipy.sparse as sparse 

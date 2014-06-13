@@ -11,7 +11,6 @@ import scipy.sparse as sparse
 import pandas
 
 from . import pcprofiles
-from . import options
 from . import matrices
 from . import ml_functions
 from . import associations
