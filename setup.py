@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='vcontact',
-      version='0.1dev',
+      version='0.2dev',
       description='Viral Contig Automatic Clutering and Taxonomy',
       url='http://www.eleves.ens.fr/home/doulcier/projects/virus/',
       author='Guilhem Doulcier',

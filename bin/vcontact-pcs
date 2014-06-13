@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+"""vContact-pcs - Copyright 2014 Guilhem Doulcier.
+
+vcontact-pcs is a tool to cluster proteins using MCL. It generates csv
+files as output that can directly be used with vcontact. ::
+
+    Output:
+        output_contigs.csv
+        output_pcs.csv
+        output_profiles.csv
+
+See also: vcontact.
+
+This program is ditributed under the term of the GNU General Public
+Licence v3 (or later) with ABSOLUTELY NO WARRANTY. This is free
+software, and you are welcome to redistribute it.
+
+"""
+
+import logging
+import pandas
+import os
+import argparse
+
+from Bio import SeqIO
+
+import vcontact.protein_clusters
+
+# Argparse config 
+parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter,)
+parser.add_argument('output',
+                    help='Output basename',
+                    type=str)
+parser.add_argument('-b','--blast-file',
+                    help='Blast results file. Used for generating the profiles. (Ignored if -m is provided)',
+                    type=str)
+parser.add_argument('-m','--mcl-file',
+                    help='MCL results file. Used for generating the profiles',
+                    type=str)
+parser.add_argument('-p','--proteins',
+                    help='CSV file linking the protein name (as in the blast file) and the contigs names',
+                    type=str)
+parser.add_argument("-g","--genbank-file",
+                    help='Genbank file. Used to extract reference taxonomic affiliation and size in bp.',
+                    type=str)
+parser.add_argument('-i','--inflation',
+                    help='Inflation parameter to define proteins clusters with MCL.',
+                    default=2.0,
+                    type=float)
+parser.add_argument('-v','--verbose',
+                    help='Verbosity level : -v warning, -vv info, -vvv debug, (default debug)',
+                    action="count",
+                    default=-1)
+parser.add_argument('-f','--force-overwrite',
+                    help='Overwrite existing files',
+                    action="store_true")
+
+
+args = parser.parse_args()
+
+# Logging config
+log_levels = [logging.WARNING,logging.INFO,logging.DEBUG]
+
+logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+logging.addLevelName( logging.INFO, "\033[1;42m%s\033[1;0m" % logging.getLevelName(logging.INFO))
+logging.addLevelName( logging.DEBUG, "\033[1;43m%s\033[1;0m" % logging.getLevelName(logging.DEBUG))
+
+# create logger with 'spam_application'
+logger = logging.getLogger('vcontact')
+logger.setLevel(log_levels[args.verbose])
+ch = logging.StreamHandler()
+ch.setLevel(log_levels[args.verbose])
+ch.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(ch)
+logger.debug("Arguments: {}".format(args))
+
+def main(args):
+    proteins = pandas.read_csv(args.proteins,sep=None)
+    pcs = vcontact.protein_clusters.make_protein_clusters(args.blast_file,args.output,args.inflation)
+    proteins, clusters,profiles,contigs = vcontact.protein_clusters.load_clusters(pcs,proteins)
+
+    proteins.set_index("id").to_csv(args.output+"_proteins.csv")
+    contigs.set_index("id").to_csv(args.output+"_contigs.csv")
+    clusters.set_index("id").to_csv(args.output+"_pcs.csv")
+    profiles.to_csv(args.output+"_profiles.csv",index=False)
+    
+if __name__ == "__main__":
+    main(args)
