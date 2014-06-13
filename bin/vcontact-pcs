@@ -76,10 +76,13 @@ logger.addHandler(ch)
 logger.debug("Arguments: {}".format(args))
 
 def main(args):
+
     proteins = pandas.read_csv(args.proteins,sep=None)
+    logger.debug("Read {} proteins from {}.".format(len(proteins),args.proteins))
     pcs = vcontact.protein_clusters.make_protein_clusters(args.blast_file,args.output,args.inflation)
     proteins, clusters,profiles,contigs = vcontact.protein_clusters.load_clusters(pcs,proteins)
 
+    logger.info("Saving files...")
     proteins.set_index("id").to_csv(args.output+"_proteins.csv")
     contigs.set_index("id").to_csv(args.output+"_contigs.csv")
     clusters.set_index("id").to_csv(args.output+"_pcs.csv")
