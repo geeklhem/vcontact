@@ -14,6 +14,6 @@ setup(name='vcontact',
         'numpy',
         'scipy',
         'pandas',
-        'sklearn'
+        'scikit-learn'
       ],
 )
