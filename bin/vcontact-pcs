@@ -22,9 +22,8 @@ import pandas
 import os
 import argparse
 
-from Bio import SeqIO
-
 import vcontact.protein_clusters
+import vcontact
 
 # Argparse config 
 parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter,)
@@ -40,9 +39,6 @@ parser.add_argument('-m','--mcl-file',
 parser.add_argument('-p','--proteins',
                     help='CSV file linking the protein name (as in the blast file) and the contigs names',
                     type=str)
-parser.add_argument("-g","--genbank-file",
-                    help='Genbank file. Used to extract reference taxonomic affiliation and size in bp.',
-                    type=str)
 parser.add_argument('-i','--inflation',
                     help='Inflation parameter to define proteins clusters with MCL.',
                     default=2.0,
@@ -54,6 +50,10 @@ parser.add_argument('-v','--verbose',
 parser.add_argument('-f','--force-overwrite',
                     help='Overwrite existing files',
                     action="store_true")
+parser.add_argument('-c','--contigs',
+                    help='Contig info file (tsv or csv)',
+                    type=str)
+
 
 
 args = parser.parse_args()
@@ -73,7 +73,7 @@ ch = logging.StreamHandler()
 ch.setLevel(log_levels[args.verbose])
 ch.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(ch)
-logger.debug("Arguments: {}".format(args))
+
 
 def main(args):
 
@@ -89,4 +89,5 @@ def main(args):
     profiles.to_csv(args.output+"_profiles.csv",index=False)
     
 if __name__ == "__main__":
+    print("\n{:=^80}\n".format("This is vcontact-pcs {}".format(vcontact.__version__)))
     main(args)
