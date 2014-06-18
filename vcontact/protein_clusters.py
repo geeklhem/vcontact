@@ -61,10 +61,10 @@ def load_clusters(fi,proteins):
     # Assign each prot to its cluster 
     proteins = proteins.set_index("id")
     for prots,clust in zip(c,name):
-        if prots in proteins.index: 
-            proteins.loc[prots,"cluster"] = clust 
-        else:
-            logger.warning(prots + "is not in the index")
+        print [p for p in prots if p not in proteins.index] 
+        prots = [p for p in prots if p in proteins.index] 
+        proteins.loc[prots,"cluster"] = clust 
+        
     # Keys
     for clust,prots in proteins.groupby("cluster"):
         clusters.loc[clust,"annotated"] = prots.keywords.count()
