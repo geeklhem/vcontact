@@ -2,13 +2,8 @@
 
 import pandas
 import logging
-import os
-import re 
 import subprocess
-import scipy.sparse as sparse 
 import numpy as np
-import sys
-import cPickle as pickle
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +45,7 @@ def load_clusters(fi,proteins):
     
     # Read MCL
     with open(fi) as f:
-            c = [ line.rstrip("\n").split("\t") for line in f ]
+        c = [ line.rstrip("\n").split("\t") for line in f ]
     c = [x for x in c if len(c)>1]
     nb_clusters = len(c)
     formater = "PC_{{:>0{}}}".format(int(round(np.log10(nb_clusters))+1))
@@ -60,14 +55,14 @@ def load_clusters(fi,proteins):
     
     # Assign each prot to its cluster 
     proteins = proteins.set_index("id")
-    not_in = []
     for prots,clust in zip(c,name):
-        not_in.append([p for p in prots if p not in proteins.index])
-        prots = [p for p in prots if p in proteins.index] 
-        proteins.loc[prots,"cluster"] = clust 
-
-    if len(not_in):
-        logger.warning("{} proteins did not have any contig: {}".format(len(not_in),";".join(not_in)))
+        try:
+            proteins.loc[prots,"cluster"] = clust 
+        except KeyError:
+            prots_in = [p for p in prots if p in proteins.index]
+            not_in = frozenset(prots)-frozenset(prots_in)
+            logger.warning("{} protein(s) without contig: {}".format(len(not_in),not_in))
+            proteins.loc[prots_in,"cluster"] = clust
         
     # Keys
     for clust,prots in proteins.groupby("cluster"):
@@ -93,80 +88,3 @@ def load_clusters(fi,proteins):
     contigs.reset_index(inplace=True)
     
     return proteins,clusters,profiles,contigs
-
-def load_refseq(self,fi=None,):
-        """ Load the data from the genbank file to creat the protein.csv, contigs.csv files.
-
-        Args:
-            fi (str): The genebank file.
-            fi_taxt (str): a pickled pandas dataframe with the taxonomy information.
-            h5_name (str): path to the cache file to save. 
-        
-        Returns:
-           (str) proteins.csv, contigs.csv 
-        """
-
-        # Loading taxonomic classes 
-        fi = os.path.expanduser(options.data_folder+"refseq/phage.genomic.gbff") if not fi else fi 
-        fi_taxa = os.path.expanduser(options.data_folder+"ncbi_taxdump/refseqphage_taxa.pkl") if not fi_taxa else fi_taxa  
-
-
-        store =  pandas.HDFStore(options.cache_folder+h5_name)
-
-        if "contigs" not in store or "proteins" not in store:
-            taxa = pandas.read_pickle(fi_taxa)
-            families = frozenset(taxa[taxa["Rank"]=="family"]["Name"])
-            genera = frozenset(taxa[taxa["Rank"]=="genus"]["Name"])
-
-
-            genome = {"name":[],
-                      "family":[],
-                      "genus":[],
-                      "size":[],}
-
-            proteins = {"protein_id":[],
-                        "contig":[],
-                        "function":[],}
-
-            # Reading the gbff file thanks to BioPython
-            rec = SeqIO.parse(fi, "gb")
-            for r in rec:
-                name = r.id.split(".")[0]
-                genome["name"].append(name)
-
-                # Taxonomy
-                genome["size"].append(len(r.seq))
-                genome["family"].append(None)
-                genome["genus"].append(None)
-                for t in r.annotations["taxonomy"]:
-                    if t in families:
-                        genome["family"][-1] = t
-                    elif t in genera:
-                        genome["genus"][-1]  = t
-                #Proteins 
-                for feature in r.features:
-                    if "protein_id" in feature.qualifiers:
-                        proteins["protein_id"].append(feature.qualifiers["protein_id"][0].split(".")[0])
-                        proteins["contig"].append(name)
-                        proteins["function"].append(feature.qualifiers["product"][0])
-
-                 
-
-            genome = pandas.DataFrame(genome).set_index("name")
-            genome["origin"] = "refseq_jan14"
-            proteins = pandas.DataFrame(proteins).set_index("protein_id")
-
-            pbc = pandas.DataFrame(proteins.groupby("contig").contig.count(), columns=["proteins"])
-            genome = pandas.merge(genome,pbc,how="left",left_index=True,right_index=True)
-
-
-            store.append('contigs',genome,format='table',data_columns=True)
-            store.append('proteins',proteins,format='table',data_columns=True)
-
-            nf = len(genome) - genome.family.count() 
-            ng = len(genome) - genome.genus.count()
-            if nf!=0 or ng!=0 :
-                logger.warning("{0} genomes without family and {1} genomes without genus.".format(nf,ng))
-
-        return store 
-
