@@ -79,7 +79,7 @@ def main(args):
     
     # Run MCL on the blast results... 
     pcs = args.output+"_mcl{}.clusters".format(int(args.inflation*10))
-    if not os.path.exists(pcs) or args.overwrite:
+    if not os.path.exists(pcs) or args.force_overwrite:
         pcs = vcontact.protein_clusters.make_protein_clusters(args.blast_file,args.output,args.inflation)
     else:
         logger.debug("File {} exists and will be used. Use -f to overwrite.".format(pcs))
@@ -91,13 +91,13 @@ def main(args):
     logger.info("Saving files...")
     for filename,df in [("proteins",proteins),("contigs",contigs),("pcs",clusters)]:
         filename = "{}_{}.csv".format(args.output,filename)
-        if not os.path.exists(filename) or args.overwrite:
+        if not os.path.exists(filename) or args.force_overwrite:
             df.set_index("id").to_csv(filename)
         else:
             logger.debug("File {} exists and will be used. Use -f to overwrite.".format(filename))
 
     filename = "{}_profiles.csv".format(args.output)
-    if not os.path.exists(filename) or args.overwrite:
+    if not os.path.exists(filename) or args.force_overwrite:
         profiles.to_csv(args.output+"_profiles.csv",index=False)
     else:
         logger.debug("File {} exists and will be used. Use -f to overwrite.".format(filename))
