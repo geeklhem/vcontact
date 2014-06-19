@@ -32,9 +32,9 @@ def make_protein_clusters(blast_fi,path,inflation=2):
                            "-o {0}.mci -write-tab {0}_mcxload.tab "
                            "").format(path),shell=True)
     subprocess.check_call(("mcl {0}.mci -I {1} -use-tab "
-                           "{0}_mcxload.tab -o {0}.clusters").format(path,inflation),shell=True)
+                           "{0}_mcxload.tab -o {0}_mcl{2}.clusters").format(path,inflation,int(inflation*10)),shell=True)
 
-    return path+".clusters"
+    return "{0}_mcl{1}.clusters".format(path,int(inflation*10))
 
 
 def load_clusters(fi,proteins):
@@ -60,10 +60,14 @@ def load_clusters(fi,proteins):
     
     # Assign each prot to its cluster 
     proteins = proteins.set_index("id")
+    not_in = []
     for prots,clust in zip(c,name):
-        print [p for p in prots if p not in proteins.index] 
+        not_in.append([p for p in prots if p not in proteins.index])
         prots = [p for p in prots if p in proteins.index] 
         proteins.loc[prots,"cluster"] = clust 
+
+    if len(not_in):
+        logger.warning("{} proteins did not have any contig: {}".format(len(not_in),";".join(not_in)))
         
     # Keys
     for clust,prots in proteins.groupby("cluster"):

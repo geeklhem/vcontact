@@ -33,11 +33,8 @@ parser.add_argument('output',
 parser.add_argument('-b','--blast-file',
                     help='Blast results file. Used for generating the profiles. (Ignored if -m is provided)',
                     type=str)
-parser.add_argument('-m','--mcl-file',
-                    help='MCL results file. Used for generating the profiles',
-                    type=str)
 parser.add_argument('-p','--proteins',
-                    help='CSV file linking the protein name (as in the blast file) and the contigs names',
+                    help='A file linking the protein name (as in the blast file) and the contigs names (csv or tsv)',
                     type=str)
 parser.add_argument('-i','--inflation',
                     help='Inflation parameter to define proteins clusters with MCL.',
@@ -51,7 +48,7 @@ parser.add_argument('-f','--force-overwrite',
                     help='Overwrite existing files',
                     action="store_true")
 parser.add_argument('-c','--contigs',
-                    help='Contig info file (tsv or csv)',
+                    help='Contig info (tsv or csv). Required fields are id and proteins',
                     type=str)
 
 
@@ -76,18 +73,35 @@ logger.addHandler(ch)
 
 
 def main(args):
-
+    # Load the proteins <-> contigs associations...
     proteins = pandas.read_csv(args.proteins,sep=None)
     logger.debug("Read {} proteins from {}.".format(len(proteins),args.proteins))
-    pcs = vcontact.protein_clusters.make_protein_clusters(args.blast_file,args.output,args.inflation)
-    proteins, clusters,profiles,contigs = vcontact.protein_clusters.load_clusters(pcs,proteins)
-
-    logger.info("Saving files...")
-    proteins.set_index("id").to_csv(args.output+"_proteins.csv")
-    contigs.set_index("id").to_csv(args.output+"_contigs.csv")
-    clusters.set_index("id").to_csv(args.output+"_pcs.csv")
-    profiles.to_csv(args.output+"_profiles.csv",index=False)
     
+    # Run MCL on the blast results... 
+    pcs = args.output+"_mcl{}.clusters".format(int(args.inflation*10))
+    if not os.path.exists(pcs) or args.overwrite:
+        pcs = vcontact.protein_clusters.make_protein_clusters(args.blast_file,args.output,args.inflation)
+    else:
+        logger.debug("File {} exists and will be used. Use -f to overwrite.".format(pcs))
+
+    # Load the clusters... 
+    proteins, clusters, profiles, contigs = vcontact.protein_clusters.load_clusters(pcs,proteins)
+
+    # Export csv files... 
+    logger.info("Saving files...")
+    for filename,df in [("proteins",proteins),("contigs",contigs),("pcs",clusters)]:
+        filename = "{}_{}.csv".format(args.output,filename)
+        if not os.path.exists(filename) or args.overwrite:
+            df.set_index("id").to_csv(filename)
+        else:
+            logger.debug("File {} exists and will be used. Use -f to overwrite.".format(filename))
+
+    filename = "{}_profiles.csv".format(args.output)
+    if not os.path.exists(filename) or args.overwrite:
+        profiles.to_csv(args.output+"_profiles.csv",index=False)
+    else:
+        logger.debug("File {} exists and will be used. Use -f to overwrite.".format(filename))
+
 if __name__ == "__main__":
     print("\n{:=^80}\n".format("This is vcontact-pcs {}".format(vcontact.__version__)))
     main(args)
