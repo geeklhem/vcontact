@@ -163,6 +163,11 @@ def main(args):
     # OUTPUT
     if "csv" in args.exports: 
         vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+    if "cytoscape" in args.exports: 
+        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+    if "krona" in args.exports: 
+        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+
 
 if __name__ == "__main__":
     print("\n{:=^80}\n".format("This is vcontact {}".format(vcontact.__version__)))

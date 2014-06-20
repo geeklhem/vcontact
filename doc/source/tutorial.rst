@@ -140,10 +140,15 @@ For the linking of modules and clusters
 Exporting
 --------
 
-You ask for an export in a folder where the computation has already been done ::
+.. Warning:: Not implemented in the command line yet. You can use
+  these function if your are using vcontact in an interactive python
+  session (see the API)
 
-  vcontact -o output_dir --export cytoscape [--contigs|--clusters]
-  vcontact -o output_dir --export krona [--class family,genus,origin]
+You can ask for an export in a folder where the computation has already been done ::
+
+  vcontact -o output_dir --export cytoscape
+  vcontact -o output_dir --export cytoscape=cluster_id
+  vcontact -o output_dir --export krona
 
 
 
