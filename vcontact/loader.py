@@ -135,11 +135,11 @@ def _matrix(profiles,contigs,pcs):
 
     profiles = pandas.merge(profiles,pcs.loc[:,["id","pos"]],
                             left_on="pc_id", right_on="id",
-                            how="left",suffixes=["","_pc"])
+                            how="inner",suffixes=["","_pc"])
 
     profiles = pandas.merge(profiles,contigs.loc[:,["id","pos"]],
                             left_on="contig_id", right_on="id",
-                            how="left",suffixes=["","_contig"])
+                            how="inner",suffixes=["","_contig"])
     
     profiles = profiles.loc[:,["pos_contig", "pos_pc"]]
     matrix = sparse.coo_matrix(([1]*len(profiles), (zip(*profiles.values))),

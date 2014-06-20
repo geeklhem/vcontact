@@ -47,11 +47,6 @@ parser.add_argument('-v','--verbose',
 parser.add_argument('-f','--force-overwrite',
                     help='Overwrite existing files',
                     action="store_true")
-parser.add_argument('-c','--contigs',
-                    help='Contig info (tsv or csv). Required fields are id and proteins',
-                    type=str)
-
-
 
 args = parser.parse_args()
 
@@ -74,6 +69,7 @@ logger.addHandler(ch)
 
 def main(args):
     # Load the proteins <-> contigs associations...
+    logger.info("Loading the proteins...")
     proteins = pandas.read_csv(args.proteins,sep=None)
     logger.debug("Read {} proteins from {}.".format(len(proteins),args.proteins))
     
@@ -84,7 +80,8 @@ def main(args):
     else:
         logger.debug("File {} exists and will be used. Use -f to overwrite.".format(pcs))
 
-    # Load the clusters... 
+    # Load the clusters...
+    logger.info("Loading the clusters...")
     proteins, clusters, profiles, contigs = vcontact.protein_clusters.load_clusters(pcs,proteins)
 
     # Export csv files... 
