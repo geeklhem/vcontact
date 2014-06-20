@@ -1,3 +1,6 @@
 vContact : Viral Contig Automatic Cluster Taxonomy
+==================================================
 
 VContact is a tool to perform Guilt-by-contig-association automatic classification of viral contigs.
+
+See the [complete documentation](http://www.eleves.ens.fr/home/doulcier/projects/virus/index.html). 
