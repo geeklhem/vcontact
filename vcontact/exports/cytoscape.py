@@ -98,7 +98,7 @@ def membership(fi, B, contigs, clusters, clusters_list=None,
     logger.debug("Wrote {} lines in {}".format(n,fi))
 
 
-def clusters(cluster_network,contigs,clusters,criterion,path):
+def clusters(cluster_network, contigs, clusters, criterion, path):
     """ Export the network and node information in a format
     that can be used with cytoscape (tab files).
 
@@ -107,7 +107,7 @@ def clusters(cluster_network,contigs,clusters,criterion,path):
         contigs (dataframe): Nodes information.
         clusters (list): Id of clusters to exports. 
         path (str): basename of the exported files.
-
+        criterion (str): criterion to put on the piechart.
     Returns:
         tuple: Tuple of the path to the edge files and 
             nodes information files

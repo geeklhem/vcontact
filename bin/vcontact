@@ -14,12 +14,15 @@ import logging
 import pandas
 import os
 import argparse
+import subprocess
 import vcontact
 import vcontact.loader
 import vcontact.pcprofiles
 import vcontact.contig_clusters
 import vcontact.modules
 import vcontact.exports.csv
+import vcontact.exports.krona
+import vcontact.exports.cytoscape
 
 # Argparse config 
 parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter,)
@@ -68,9 +71,16 @@ parser.add_argument('--link-prop',
                     default=0.5,
                     type=float)
 parser.add_argument('-e','--exports',
-                    help='Export backend',
+                    help='Export backend. Suported values are "csv", "krona" and "cytoscape"',
                     nargs="*",
-                    default=["csv","krona"])
+                    default=["csv"])
+parser.add_argument('--cluster-filter',
+                    help='Id of the clusters to export (Cytoscape export only).',
+                    nargs="*",
+                    default=[0])
+parser.add_argument('--criterion',
+                    help='Pooling criterion for cluster export (Cytoscape export only).',
+                    default="predicted_family")
 
 parser.add_argument('-v','--verbose',
                     help='Verbosity level : -v warning, -vv info, -vvv debug, (default debug)',
@@ -158,15 +168,55 @@ def main(args):
     except Exception as e:
         link = None
         logger.error("Error in linking modules and clusters")
-        logger.exception(e)
+        logger.exception(e) 
         
     # OUTPUT
-    if "csv" in args.exports: 
-        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
-    if "cytoscape" in args.exports: 
-        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
-    if "krona" in args.exports: 
-        vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+    if "csv" in args.exports:
+        try:
+            vcontact.exports.csv.complete(folder,pcm,gc,mod,link)
+        except Exception as e:
+            logger.error("Error in CSV export")
+            logger.exception(e) 
+        
+    if "cytoscape" in args.exports:
+        cytoscape_file = folder + "cytoscape_export"
+
+        try:
+            vcontact.exports.cytoscape.contigs(gc.network,gc.contigs,
+                                               args.cluster_filter,
+                                               cytoscape_file+"_contigs")
+        except Exception as e:
+            logger.error("Error in Cytoscape export of contigs")
+            logger.exception(e) 
+
+        try:        
+            vcontact.exports.cytoscape.clusters(gc.network,gc.contigs,
+                                                gc.clusters,args.criterion,
+                                                cytoscape_file+"_clusters")
+            vcontact.exports.cytoscape.membership(cytoscape_file+"_membership",
+                                                  gc.matrix["B"],
+                                                  gc.contigs,gc.clusters,
+                                                  args.cluster_filter,
+                                                  args.criterion)
+        except Exception as e:
+            logger.error("Error in Cytoscape export of clusters")
+            logger.exception(e) 
+
+
+
+    if "krona" in args.exports:
+        krona_file = folder + "krona_export.txt"
+        try:
+            vcontact.exports.krona.textfile(gc.contigs,krona_file)
+        except Exception as e:
+            logger.error("Error in Krona export")
+            logger.exception(e) 
+        
+        try:
+            subprocess.check_call("ktImportText {}".format(krona_file),shell=True)
+        except Exception as e:
+            logger.error(("ktImportText {} failed ({}). \n (Is krona executable in"
+            "the PATH?). You can still do it manually.").format(krona_file,e))
 
 
 if __name__ == "__main__":
