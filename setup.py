@@ -11,11 +11,11 @@ setup(name='vcontact',
       packages=['vcontact'],
       scripts=['bin/vcontact','bin/vcontact-pcs'],
       install_requires=[
-        'networkx',
-        'numpy',
-        'scipy',
-        'pandas',
-        'scikit-learn',
-        'biopython'
+        'networkx==1.8.1',
+        'numpy==1.8.0',
+        'scipy==0.13.3',
+        'pandas==0.13.1',
+        'scikit-learn==0.14.1',
+        'biopython==1.63'
       ],
 )
