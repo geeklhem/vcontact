@@ -8,7 +8,7 @@ setup(name='vcontact',
       long_description=open('README').read(),
       author_email='guilhem.doulcier@ens.fr',
       license='GPLv3',
-      packages=['vcontact'],
+      packages=['vcontact','vcontact.exports'],
       scripts=['bin/vcontact','bin/vcontact-pcs'],
       install_requires=[
         'networkx==1.8.1',
