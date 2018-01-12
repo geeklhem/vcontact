@@ -1,6 +1,9 @@
-vContact : Viral Contig Automatic Cluster Taxonomy
-==================================================
+# This is a very old version of vContact that was written during my master degree ! 
 
-VContact is a tool to perform Guilt-by-contig-association automatic classification of viral contigs.
+It does not reflect the current version of vContact and should **NOT** be used in production.
+I keep this repository for **historic purpose only**, since I am no more involved in the development of vContact.
 
-See the complete documentation: http://www.eleves.ens.fr/home/doulcier/projects/virus/index.html). 
+vConTACT lives here now: 
+>    Bolduc B, Jang HB, Doulcier G, You Z, Roux S, Sullivan MB. (2017) 
+>    vConTACT: an iVirus tool to classify double-stranded DNA viruses that infect Archaea and Bacteria. PeerJ 5:e3243 
+>    https://doi.org/10.7717/peerj.3243 
